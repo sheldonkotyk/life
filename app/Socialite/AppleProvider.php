@@ -17,6 +17,7 @@ class AppleProvider extends BaseProvider
             'client_id' => $fields['client_id'] ?? null,
             'redirect_uri' => $fields['redirect_uri'] ?? null,
             'grant_type' => $fields['grant_type'] ?? null,
+            'code' => $fields['code'] ?? null,
             'code_len' => isset($fields['code']) ? strlen($fields['code']) : 0,
             'secret_len' => isset($fields['client_secret']) ? strlen($fields['client_secret']) : 0,
             'secret_head' => isset($fields['client_secret']) ? substr($fields['client_secret'], 0, 60) : null,
