@@ -8,7 +8,11 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use GuzzleHttp\Client;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use Laravel\Socialite\Facades\Socialite;
+use Psr\Http\Message\RequestInterface;
 
 class AuthController extends Controller
 {
@@ -38,7 +42,19 @@ class AuthController extends Controller
             'app_url' => config('app.url'),
         ]);
 
-        $appleUser = Socialite::driver('apple')->user();
+        $stack = HandlerStack::create();
+        $stack->push(Middleware::tap(function (RequestInterface $req) {
+            if (str_contains((string) $req->getUri(), 'appleid.apple.com/auth/token')) {
+                \Log::info('apple.token.request', [
+                    'uri' => (string) $req->getUri(),
+                    'auth_header' => $req->getHeaderLine('Authorization'),
+                    'body' => (string) $req->getBody(),
+                ]);
+            }
+        }));
+        $driver = Socialite::driver('apple')->setHttpClient(new Client(['handler' => $stack]));
+
+        $appleUser = $driver->user();
 
         $user = User::firstOrNew(['apple_sub' => $appleUser->getId()]);
         $user->email = $appleUser->getEmail() ?: $user->email ?: ($appleUser->getId() . '@apple.private');
