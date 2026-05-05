@@ -29,6 +29,15 @@ class AuthController extends Controller
 
     public function appleCallback(): RedirectResponse
     {
+        \Log::info('apple.config', [
+            'cid' => config('services.apple.client_id'),
+            'secret_len' => strlen((string) config('services.apple.client_secret')),
+            'secret_head' => substr((string) config('services.apple.client_secret'), 0, 60),
+            'secret_tail' => substr((string) config('services.apple.client_secret'), -20),
+            'redirect' => config('services.apple.redirect'),
+            'app_url' => config('app.url'),
+        ]);
+
         $appleUser = Socialite::driver('apple')->user();
 
         $user = User::firstOrNew(['apple_sub' => $appleUser->getId()]);
