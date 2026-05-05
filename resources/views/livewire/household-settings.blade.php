@@ -19,24 +19,45 @@
         </form>
     </flux:card>
 
-    <flux:card>
-        <flux:heading size="lg">Invite code</flux:heading>
+    @php $inviteUrl = route('login.invite.link', ['code' => $inviteCode]); @endphp
+    <flux:card x-data="{
+        copied: null,
+        copy(text, key) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.copied = key;
+                setTimeout(() => { if (this.copied === key) this.copied = null; }, 1500);
+            });
+        }
+    }">
+        <flux:heading size="lg">Invite</flux:heading>
         <flux:text size="sm" variant="subtle" class="mb-3">
-            Share this code so others can join your household.
+            Share the link or code so others can join your household.
         </flux:text>
 
-        <div class="flex items-center gap-3">
-            <flux:input readonly value="{{ $inviteCode }}" class="font-mono" />
-            @if ($this->canManage)
-                <flux:button
-                    type="button"
-                    variant="ghost"
-                    wire:click="regenerateInviteCode"
-                    wire:confirm="Regenerate invite code? The old one will stop working."
-                >
-                    Regenerate
+        <div class="space-y-3">
+            <div class="flex items-center gap-2">
+                <flux:input readonly value="{{ $inviteUrl }}" class="font-mono" />
+                <flux:button type="button" variant="ghost" @click="copy('{{ $inviteUrl }}', 'link')">
+                    <span x-text="copied === 'link' ? 'Copied!' : 'Copy link'"></span>
                 </flux:button>
-            @endif
+            </div>
+
+            <div class="flex items-center gap-2">
+                <flux:input readonly value="{{ $inviteCode }}" class="font-mono" />
+                <flux:button type="button" variant="ghost" @click="copy('{{ $inviteCode }}', 'code')">
+                    <span x-text="copied === 'code' ? 'Copied!' : 'Copy code'"></span>
+                </flux:button>
+                @if ($this->canManage)
+                    <flux:button
+                        type="button"
+                        variant="ghost"
+                        wire:click="regenerateInviteCode"
+                        wire:confirm="Regenerate invite code? The old one and link will stop working."
+                    >
+                        Regenerate
+                    </flux:button>
+                @endif
+            </div>
         </div>
     </flux:card>
 
