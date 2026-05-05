@@ -43,7 +43,7 @@ it('Tracker mounts to the user\'s local date, not UTC', function () {
     Livewire::test(Tracker::class)->assertSet('date', '2026-05-04');
 });
 
-it('Availability days start on the user\'s local today', function () {
+it('Availability days start on the user\'s local week', function () {
     CarbonImmutable::setTestNow('2026-05-05 03:00:00');
 
     $h = Household::create(['name' => 'H']);
@@ -58,6 +58,7 @@ it('Availability days start on the user\'s local today', function () {
     $component = Livewire::test(Availability::class);
     $first = $component->instance()->days()[0];
 
+    // 2026-05-05 03:00 UTC = 2026-05-04 LA (Monday) → startOfWeek = 2026-05-04
     expect($first->toDateString())->toBe('2026-05-04');
 });
 

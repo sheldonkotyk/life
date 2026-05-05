@@ -16,16 +16,31 @@ class Availability extends Component
 
     public ?int $memberId = null;
 
+    public string $weekStart;
+
     public function mount(): void
     {
         $this->memberId = auth()->user()->familyMember?->id
             ?? FamilyMember::where('household_id', auth()->user()->household_id)->value('id');
+        $this->weekStart = CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
+    }
+
+    public function shiftWeek(int $weeks): void
+    {
+        $this->weekStart = CarbonImmutable::parse($this->weekStart)->addWeeks($weeks)->toDateString();
+        unset($this->unavailableKeys);
+    }
+
+    public function jumpToToday(): void
+    {
+        $this->weekStart = CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
+        unset($this->unavailableKeys);
     }
 
     #[Computed]
     public function days(): array
     {
-        $start = CarbonImmutable::today(auth()->user()->getTimezone());
+        $start = CarbonImmutable::parse($this->weekStart);
         return array_map(fn ($i) => $start->addDays($i), range(0, 6));
     }
 
@@ -41,9 +56,9 @@ class Availability extends Component
     {
         if (! $this->memberId) return [];
 
-        $today = CarbonImmutable::today(auth()->user()->getTimezone());
-        $start = $today->toDateString();
-        $end = $today->addDays(6)->toDateString();
+        $weekStart = CarbonImmutable::parse($this->weekStart);
+        $start = $weekStart->toDateString();
+        $end = $weekStart->addDays(6)->toDateString();
 
         return FamilyMemberUnavailability::where('family_member_id', $this->memberId)
             ->whereBetween('date', [$start, $end])

@@ -29,6 +29,21 @@ class User extends Authenticatable
         return $this->timezone ?: 'UTC';
     }
 
+    public function getAvatarAttribute(?string $value): ?string
+    {
+        if ($value) {
+            return $value;
+        }
+
+        if (! $this->email) {
+            return null;
+        }
+
+        $hash = md5(strtolower(trim($this->email)));
+
+        return "https://www.gravatar.com/avatar/{$hash}?s=200&d=mp";
+    }
+
     public function household(): BelongsTo
     {
         return $this->belongsTo(Household::class);

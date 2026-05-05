@@ -1,17 +1,27 @@
 <div class="space-y-6">
+    @php
+        $weekStartDate = \Carbon\CarbonImmutable::parse($this->weekStart);
+    @endphp
     <div class="flex flex-wrap gap-3 items-baseline justify-between">
         <div>
             <flux:heading size="xl">Meal Attendance</flux:heading>
-            <flux:text size="sm" variant="subtle">Check the meals you'll be there for in the next 7 days.</flux:text>
+            <flux:text size="sm" variant="subtle">Check the meals you'll be there for this week.</flux:text>
         </div>
 
-        @if ($this->members->count() > 1)
-            <flux:select wire:model.live="memberId" class:input="w-48">
-                @foreach ($this->members as $m)
-                    <flux:select.option value="{{ $m->id }}">{{ $m->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
-        @endif
+        <div class="flex items-center gap-2">
+            <flux:button size="sm" variant="ghost" icon="chevron-left" wire:click="shiftWeek(-1)">Prev</flux:button>
+            <flux:button size="sm" wire:click="jumpToToday">Today</flux:button>
+            <flux:button size="sm" variant="ghost" icon-trailing="chevron-right" wire:click="shiftWeek(1)">Next</flux:button>
+            <flux:text size="sm" variant="subtle" class="ml-2">{{ $weekStartDate->format('M j') }} – {{ $weekStartDate->addDays(6)->format('M j, Y') }}</flux:text>
+
+            @if ($this->members->count() > 1)
+                <flux:select wire:model.live="memberId" class:input="w-48 ml-2">
+                    @foreach ($this->members as $m)
+                        <flux:select.option value="{{ $m->id }}">{{ $m->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
+        </div>
     </div>
 
     <flux:card class="overflow-x-auto p-0!">

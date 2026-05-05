@@ -12,8 +12,13 @@ class FamilyMemberUnavailability extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'date' => 'date',
+        'date' => 'date:Y-m-d',
     ];
+
+    public function setDateAttribute($value): void
+    {
+        $this->attributes['date'] = \Carbon\Carbon::parse($value)->toDateString();
+    }
 
     public function familyMember(): BelongsTo
     {

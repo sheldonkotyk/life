@@ -33,11 +33,12 @@ class AuthController extends Controller
 
         $user = User::firstOrNew(['apple_sub' => $appleUser->getId()]);
         $user->email = $appleUser->getEmail() ?: $user->email ?: ($appleUser->getId() . '@apple.private');
-        $user->name = $appleUser->getName() ?: $user->name ?: 'Apple User';
+        $user->name = $appleUser->getName() ?: $user->name ?: 'You';
         $user->avatar = $appleUser->getAvatar() ?: $user->avatar;
 
         if (! $user->household_id) {
-            $household = Household::create(['name' => $user->name . "'s Household"]);
+            $householdName = $appleUser->getName() ? $user->name . "'s Household" : 'Your Household';
+            $household = Household::create(['name' => $householdName]);
             $user->household_id = $household->id;
         }
 
