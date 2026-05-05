@@ -19,6 +19,41 @@
             @endif
         </div>
 
+        <div class="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-700">
+            @if ($pendingHousehold)
+                <flux:callout color="emerald" icon="check-circle">
+                    <flux:callout.text>
+                        You'll join <strong>{{ $pendingHousehold->name }}</strong> after signing in.
+                    </flux:callout.text>
+                    <x-slot name="actions">
+                        <form method="POST" action="{{ route('login.invite.clear') }}">@csrf
+                            <flux:button size="sm" variant="ghost" type="submit">Cancel</flux:button>
+                        </form>
+                    </x-slot>
+                </flux:callout>
+            @else
+                <form method="POST" action="{{ route('login.invite') }}" class="space-y-2">
+                    @csrf
+                    <flux:field>
+                        <flux:label>Have an invite code?</flux:label>
+                        <div class="flex gap-2">
+                            <flux:input
+                                name="invite_code"
+                                placeholder="ABCD1234"
+                                class="font-mono uppercase"
+                                maxlength="12"
+                                value="{{ old('invite_code') }}"
+                            />
+                            <flux:button type="submit">Apply</flux:button>
+                        </div>
+                        @error('invite_code')
+                            <flux:error>{{ $message }}</flux:error>
+                        @enderror
+                    </flux:field>
+                </form>
+            @endif
+        </div>
+
         @if ($devUsers->isNotEmpty())
             <div class="mt-6">
                 <flux:text size="xs" variant="subtle" class="uppercase tracking-wide mb-2 block">Dev login (local only)</flux:text>

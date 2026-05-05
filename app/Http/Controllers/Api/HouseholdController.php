@@ -39,7 +39,7 @@ class HouseholdController extends Controller
     {
         $data = $request->validate(['invite_code' => ['required', 'string']]);
         $hh = \App\Models\Household::where('invite_code', strtoupper($data['invite_code']))->firstOrFail();
-        $request->user()->update(['household_id' => $hh->id]);
+        $request->user()->joinHousehold($hh);
         return response()->json(['ok' => true, 'household_id' => $hh->id]);
     }
 }

@@ -31,18 +31,18 @@ class Planner extends Component
 
     public function mount(): void
     {
-        $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->startOfWeek()->toDateString();
+        $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->toDateString();
     }
 
     public function shiftWeek(int $weeks): void
     {
-        $this->weekStart = CarbonImmutable::parse($this->weekStart)->addWeeks($weeks)->toDateString();
+        $this->weekStart = CarbonImmutable::parse($this->weekStart)->addDays($weeks * 7)->toDateString();
         $this->cancelEdit();
     }
 
     public function jumpToToday(): void
     {
-        $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->startOfWeek()->toDateString();
+        $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->toDateString();
         $this->cancelEdit();
     }
 
@@ -148,7 +148,7 @@ class Planner extends Component
     public function render()
     {
         $hh = auth()->user()->household_id;
-        $start = CarbonImmutable::parse($this->weekStart)->startOfWeek();
+        $start = CarbonImmutable::parse($this->weekStart);
         $end = $start->addDays(6);
 
         $days = collect(range(0, 6))->map(fn($i) => $start->addDays($i));

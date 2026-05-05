@@ -1,14 +1,64 @@
 <div class="space-y-6">
     <div class="flex flex-wrap gap-3 items-baseline justify-between">
         <flux:heading size="xl">Weekly Plan</flux:heading>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <flux:button size="sm" variant="ghost" icon="chevron-left" wire:click="shiftWeek(-1)">Prev</flux:button>
             <flux:button size="sm" wire:click="jumpToToday">Today</flux:button>
             <flux:button size="sm" variant="ghost" icon-trailing="chevron-right" wire:click="shiftWeek(1)">Next</flux:button>
-            <flux:text size="sm" variant="subtle" class="ml-2">{{ $start->format('M j') }} – {{ $start->addDays(6)->format('M j, Y') }}</flux:text>
+            <flux:text size="sm" variant="subtle" class="w-full sm:w-auto sm:ml-2">{{ $start->format('M j') }} – {{ $start->addDays(6)->format('M j, Y') }}</flux:text>
         </div>
     </div>
 
+    {{-- Mobile: stacked by day --}}
+    <div class="lg:hidden space-y-3">
+        @foreach ($days as $d)
+            @php $isToday = $d->isToday(); @endphp
+            <flux:card class="p-0! overflow-hidden">
+                <div class="flex items-baseline justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-700 {{ $isToday ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'bg-zinc-50 dark:bg-zinc-800/50' }}">
+                    <div class="font-semibold {{ $isToday ? 'text-indigo-700 dark:text-indigo-300' : '' }}">{{ $d->format('l') }}</div>
+                    <div class="text-xs text-zinc-500">{{ $d->format('M j') }}</div>
+                </div>
+                <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    @foreach (['breakfast', 'lunch', 'dinner'] as $slot)
+                        @php
+                            $key = $d->toDateString() . '|' . $slot;
+                            $cellPlans = $plans->get($key, collect());
+                        @endphp
+                        <div class="px-3 py-2">
+                            <div class="text-[10px] uppercase tracking-wide text-zinc-500 font-medium mb-1.5">{{ $slot }}</div>
+                            @foreach ($cellPlans as $plan)
+                                <button
+                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}', {{ $plan->id }})"
+                                    class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1">
+                                    <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{{ $plan->displayName() }}</div>
+                                    @php $mp = $plan->macrosPerServing(); @endphp
+                                    @if ($mp['calories'] > 0)
+                                        <div class="text-[11px] text-zinc-500 mt-0.5">{{ round($mp['calories']) }} kcal · P{{ $mp['protein_g'] }} C{{ $mp['carbs_g'] }} F{{ $mp['fat_g'] }}</div>
+                                    @endif
+                                    <div class="flex flex-wrap gap-0.5 mt-1 items-center">
+                                        @foreach ($plan->attendees as $a)
+                                            <x-avatar :member="$a" size="xs" />
+                                        @endforeach
+                                        @if ($plan->save_leftovers)
+                                            <span class="ml-auto text-[11px] text-amber-600">🥡{{ $plan->leftover_servings }}</span>
+                                        @endif
+                                    </div>
+                                </button>
+                            @endforeach
+                            <button
+                                wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
+                                class="w-full text-sm text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1.5 rounded">
+                                + add
+                            </button>
+                        </div>
+                    @endforeach
+                </div>
+            </flux:card>
+        @endforeach
+    </div>
+
+    {{-- Desktop: weekly grid --}}
+    <div class="hidden lg:block">
     <flux:card class="overflow-x-auto p-0!">
         <table class="w-full text-sm">
             <thead>
@@ -64,11 +114,12 @@
             </tbody>
         </table>
     </flux:card>
+    </div>
 
     {{-- Edit panel --}}
     @if ($editingDate)
         <div class="fixed inset-0 bg-zinc-900/40 z-40" wire:click="cancelEdit"></div>
-        <div class="fixed inset-y-0 right-0 w-full sm:w-[480px] bg-white dark:bg-zinc-900 shadow-2xl z-50 flex flex-col">
+        <div class="fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[480px] bg-white dark:bg-zinc-900 shadow-2xl z-50 flex flex-col">
             <div class="p-4 border-b border-zinc-200 dark:border-zinc-700 flex justify-between items-center">
                 <div>
                     <flux:heading class="capitalize">{{ $editingSlot }}</flux:heading>

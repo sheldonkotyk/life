@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -49,9 +50,43 @@ class User extends Authenticatable
         return $this->belongsTo(Household::class);
     }
 
+    public function households(): BelongsToMany
+    {
+        return $this->belongsToMany(Household::class)->withPivot('role')->withTimestamps();
+    }
+
+    public function joinHousehold(Household $household, ?string $role = null): void
+    {
+        if ($role === null && $household->admins()->doesntExist()) {
+            $role = 'admin';
+        }
+
+        $this->households()->syncWithoutDetaching([
+            $household->id => ['role' => $role],
+        ]);
+        $this->forceFill(['household_id' => $household->id])->save();
+    }
+
     public function familyMember(): HasOne
     {
         return $this->hasOne(FamilyMember::class);
+    }
+
+    public function isAdminOf(Household $household): bool
+    {
+        $membership = $this->households()->where('households.id', $household->id)->first();
+
+        return $membership?->pivot->role === 'admin';
+    }
+
+    public function canManageHousehold(Household $household): bool
+    {
+        if ($this->isAdminOf($household)) {
+            return true;
+        }
+
+        return $household->users()->wherePivot('role', 'admin')->doesntExist()
+            && $household->users()->where('users.id', $this->id)->exists();
     }
 
     protected static function booted(): void

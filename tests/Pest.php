@@ -18,6 +18,7 @@ function loginUser(?Household $household = null): User
         'name' => 'Test User',
         'email' => 'user-' . uniqid() . '@example.test',
     ]);
+    $user->households()->syncWithoutDetaching([$household->id]);
     test()->actingAs($user);
     return $user;
 }
@@ -30,6 +31,7 @@ function loginApiUser(?Household $household = null): User
         'name' => 'API User',
         'email' => 'api-' . uniqid() . '@example.test',
     ]);
+    $user->households()->syncWithoutDetaching([$household->id]);
     Sanctum::actingAs($user);
     return $user;
 }

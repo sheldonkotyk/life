@@ -67,6 +67,9 @@
                 <flux:menu>
                     <flux:menu.group :heading="auth()->user()->household->name ?? 'Household'">
                         <flux:menu.item icon="user-circle" :href="url('/profile')">Profile</flux:menu.item>
+                        @if (auth()->user()->household)
+                            <flux:menu.item icon="home" :href="url('/household')">Household</flux:menu.item>
+                        @endif
                         <form method="POST" action="{{ url('/logout') }}">@csrf
                             <flux:menu.item icon="arrow-right-start-on-rectangle" as="button" type="submit">Sign out</flux:menu.item>
                         </form>

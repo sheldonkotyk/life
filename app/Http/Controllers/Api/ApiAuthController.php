@@ -44,11 +44,15 @@ class ApiAuthController extends Controller
             $user->timezone = $data['timezone'];
         }
 
+        $newHousehold = null;
         if (! $user->household_id) {
-            $household = Household::create(['name' => $user->name . "'s Household"]);
-            $user->household_id = $household->id;
+            $newHousehold = Household::create(['name' => $user->name . "'s Household"]);
         }
         $user->save();
+
+        if ($newHousehold) {
+            $user->joinHousehold($newHousehold);
+        }
 
         if (! $user->familyMember) {
             FamilyMember::create([
