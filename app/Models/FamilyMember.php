@@ -59,4 +59,9 @@ class FamilyMember extends Model
     {
         return $this->belongsToMany(MealPlan::class, 'meal_attendances')->withTimestamps();
     }
+
+    public function unavailabilities(): HasMany
+    {
+        return $this->hasMany(FamilyMemberUnavailability::class);
+    }
 }

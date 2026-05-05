@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Livewire\Availability;
 use App\Livewire\Family;
 use App\Livewire\Planner;
 use App\Livewire\Recipes;
@@ -21,4 +22,5 @@ Route::middleware('auth')->group(function () {
     Route::get('/recipes', Recipes::class);
     Route::get('/shopping', ShoppingList::class);
     Route::get('/tracker', Tracker::class);
+    Route::get('/availability', Availability::class);
 });

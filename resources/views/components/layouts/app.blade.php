@@ -29,6 +29,7 @@
             <flux:navbar class="-mb-px">
                 @foreach ([
                     '' => 'Plan',
+                    'availability' => 'Attendance',
                     'family' => 'Family',
                     'recipes' => 'Recipes',
                     'shopping' => 'Shopping',

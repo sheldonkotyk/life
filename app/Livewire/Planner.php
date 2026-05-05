@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\FamilyMember;
+use App\Models\FamilyMemberUnavailability;
 use App\Models\MealPlan;
 use App\Models\Recipe;
 use Carbon\CarbonImmutable;
@@ -71,7 +72,10 @@ class Planner extends Component
             $this->notes = '';
             $this->saveLeftovers = false;
             $this->leftoverServings = null;
-            $this->attendees = $allMemberIds;
+            $unavailableIds = FamilyMemberUnavailability::whereIn('family_member_id', $allMemberIds)
+                ->where('date', $date)->where('slot', $slot)
+                ->pluck('family_member_id')->all();
+            $this->attendees = array_values(array_diff($allMemberIds, $unavailableIds));
             $this->skippedIngredientIds = [];
         }
     }
