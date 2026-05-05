@@ -65,7 +65,7 @@
                     avatar="{{ auth()->user()->avatar }}"
                 />
                 <flux:menu>
-                    <flux:menu.group heading="{{ auth()->user()->household->name ?? 'Household' }}">
+                    <flux:menu.group :heading="auth()->user()->household->name ?? 'Household'">
                         <form method="POST" action="{{ url('/logout') }}">@csrf
                             <flux:menu.item icon="arrow-right-start-on-rectangle" as="button" type="submit">Sign out</flux:menu.item>
                         </form>

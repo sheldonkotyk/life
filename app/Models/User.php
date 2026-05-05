@@ -33,4 +33,13 @@ class User extends Authenticatable
     {
         return $this->hasOne(FamilyMember::class);
     }
+
+    protected static function booted(): void
+    {
+        static::saved(function (User $user) {
+            if ($user->wasChanged('name')) {
+                $user->familyMember()->update(['name' => $user->name]);
+            }
+        });
+    }
 }
