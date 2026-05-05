@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppleNotificationController;
 use App\Http\Controllers\AuthController;
 use App\Livewire\Availability;
 use App\Livewire\Family;
@@ -13,6 +14,7 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::get('/auth/apple/redirect', [AuthController::class, 'redirectToApple']);
 Route::get('/auth/apple/callback', [AuthController::class, 'appleCallback']);
 Route::post('/auth/apple/callback', [AuthController::class, 'appleCallback']);
+Route::post('/auth/apple/notifications', AppleNotificationController::class)->name('apple.notifications');
 Route::post('/dev-login/{user}', [AuthController::class, 'devLogin']);
 Route::post('/logout', [AuthController::class, 'logout']);
 

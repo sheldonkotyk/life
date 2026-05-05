@@ -1,12 +1,15 @@
 <div class="space-y-6">
     <div class="flex items-baseline justify-between">
         <flux:heading size="xl">Family</flux:heading>
-        <flux:text variant="subtle">{{ $members->count() }} {{ Str::plural('member', $members->count()) }}</flux:text>
+        <div class="flex items-center gap-3">
+            <flux:text variant="subtle">{{ $members->count() }} {{ Str::plural('member', $members->count()) }}</flux:text>
+            <flux:button variant="primary" icon="plus" wire:click="create">Add family member</flux:button>
+        </div>
     </div>
 
-    {{-- Add / edit form --}}
-    <flux:card>
-        <flux:heading>{{ $editingId ? 'Edit member' : 'Add member' }}</flux:heading>
+    {{-- Add / edit modal --}}
+    <flux:modal name="member-form" @close="resetForm" class="md:w-[40rem]">
+        <flux:heading size="lg">{{ $editingId ? 'Edit member' : 'Add family member' }}</flux:heading>
 
         <form wire:submit="save" class="grid grid-cols-1 sm:grid-cols-6 gap-4 mt-4 items-end">
             <div class="sm:col-span-2">
@@ -35,9 +38,9 @@
                 <flux:button type="submit" variant="primary">
                     {{ $editingId ? 'Update' : 'Add' }}
                 </flux:button>
-                @if ($editingId)
-                    <flux:button type="button" wire:click="resetForm" variant="ghost">Cancel</flux:button>
-                @endif
+                <flux:modal.close>
+                    <flux:button type="button" variant="ghost">Cancel</flux:button>
+                </flux:modal.close>
             </div>
 
             <div class="sm:col-span-6">
@@ -69,7 +72,7 @@
                 </div>
             </div>
         </form>
-    </flux:card>
+    </flux:modal>
 
     {{-- Member cards --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

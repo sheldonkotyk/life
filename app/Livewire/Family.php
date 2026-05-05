@@ -66,6 +66,13 @@ class Family extends Component
         }
 
         $this->resetForm();
+        $this->modal('member-form')->close();
+    }
+
+    public function create(): void
+    {
+        $this->resetForm();
+        $this->modal('member-form')->show();
     }
 
     public function edit(int $id): void
@@ -81,6 +88,7 @@ class Family extends Component
         $this->targetProteinG = $m->target_protein_g;
         $this->targetCarbsG = $m->target_carbs_g;
         $this->targetFatG = $m->target_fat_g;
+        $this->modal('member-form')->show();
     }
 
     public function delete(int $id): void
