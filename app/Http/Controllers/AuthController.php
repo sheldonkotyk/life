@@ -8,11 +8,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use GuzzleHttp\Client;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Middleware;
 use Laravel\Socialite\Facades\Socialite;
-use Psr\Http\Message\RequestInterface;
 
 class AuthController extends Controller
 {
@@ -33,28 +29,7 @@ class AuthController extends Controller
 
     public function appleCallback(): RedirectResponse
     {
-        \Log::info('apple.config', [
-            'cid' => config('services.apple.client_id'),
-            'secret_len' => strlen((string) config('services.apple.client_secret')),
-            'secret_head' => substr((string) config('services.apple.client_secret'), 0, 60),
-            'secret_tail' => substr((string) config('services.apple.client_secret'), -20),
-            'redirect' => config('services.apple.redirect'),
-            'app_url' => config('app.url'),
-        ]);
-
-        $stack = HandlerStack::create();
-        $stack->push(Middleware::tap(function (RequestInterface $req) {
-            if (str_contains((string) $req->getUri(), 'appleid.apple.com/auth/token')) {
-                \Log::info('apple.token.request', [
-                    'uri' => (string) $req->getUri(),
-                    'auth_header' => $req->getHeaderLine('Authorization'),
-                    'body' => (string) $req->getBody(),
-                ]);
-            }
-        }));
-        $driver = Socialite::driver('apple')->setHttpClient(new Client(['handler' => $stack]));
-
-        $appleUser = $driver->user();
+        $appleUser = Socialite::driver('apple')->user();
 
         $user = User::firstOrNew(['apple_sub' => $appleUser->getId()]);
         $user->email = $appleUser->getEmail() ?: $user->email ?: ($appleUser->getId() . '@apple.private');
