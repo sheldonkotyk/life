@@ -15,7 +15,7 @@ class Tracker extends Component
 
     public function mount(): void
     {
-        $this->date = CarbonImmutable::now()->toDateString();
+        $this->date = CarbonImmutable::now(auth()->user()->getTimezone())->toDateString();
     }
 
     public function shiftDay(int $days): void
@@ -25,7 +25,7 @@ class Tracker extends Component
 
     public function jumpToToday(): void
     {
-        $this->date = CarbonImmutable::now()->toDateString();
+        $this->date = CarbonImmutable::now(auth()->user()->getTimezone())->toDateString();
     }
 
     public function render()

@@ -29,6 +29,7 @@ class ApiAuthController extends Controller
             'name' => ['nullable', 'string'],
             'email' => ['nullable', 'email'],
             'device_name' => ['nullable', 'string'],
+            'timezone' => ['nullable', 'timezone'],
         ]);
 
         $sub = $this->extractAppleSub($data['identity_token']);
@@ -39,6 +40,9 @@ class ApiAuthController extends Controller
         $user = User::firstOrNew(['apple_sub' => $sub]);
         $user->email = $data['email'] ?? $user->email ?? ($sub . '@apple.private');
         $user->name = $data['name'] ?? $user->name ?? 'Apple User';
+        if (isset($data['timezone']) && ! $user->timezone) {
+            $user->timezone = $data['timezone'];
+        }
 
         if (! $user->household_id) {
             $household = Household::create(['name' => $user->name . "'s Household"]);

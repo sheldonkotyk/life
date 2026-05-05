@@ -24,6 +24,11 @@ class User extends Authenticatable
         ];
     }
 
+    public function getTimezone(): string
+    {
+        return $this->timezone ?: 'UTC';
+    }
+
     public function household(): BelongsTo
     {
         return $this->belongsTo(Household::class);

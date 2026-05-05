@@ -31,7 +31,7 @@ class Planner extends Component
 
     public function mount(): void
     {
-        $this->weekStart = CarbonImmutable::now()->startOfWeek()->toDateString();
+        $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->startOfWeek()->toDateString();
     }
 
     public function shiftWeek(int $weeks): void
@@ -42,7 +42,7 @@ class Planner extends Component
 
     public function jumpToToday(): void
     {
-        $this->weekStart = CarbonImmutable::now()->startOfWeek()->toDateString();
+        $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->startOfWeek()->toDateString();
         $this->cancelEdit();
     }
 
@@ -73,7 +73,7 @@ class Planner extends Component
             $this->saveLeftovers = false;
             $this->leftoverServings = null;
             $unavailableIds = FamilyMemberUnavailability::whereIn('family_member_id', $allMemberIds)
-                ->where('date', $date)->where('slot', $slot)
+                ->whereDate('date', $date)->where('slot', $slot)
                 ->pluck('family_member_id')->all();
             $this->attendees = array_values(array_diff($allMemberIds, $unavailableIds));
             $this->skippedIngredientIds = [];

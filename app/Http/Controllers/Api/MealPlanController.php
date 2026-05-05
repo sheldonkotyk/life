@@ -13,7 +13,7 @@ class MealPlanController extends Controller
     public function index(Request $request): JsonResponse
     {
         $hh = $request->user()->household_id;
-        $start = $request->date('from') ?? CarbonImmutable::now()->startOfWeek();
+        $start = $request->date('from') ?? CarbonImmutable::now($request->user()->getTimezone())->startOfWeek();
         $end = $request->date('to') ?? CarbonImmutable::parse($start)->addDays(6);
 
         $plans = MealPlan::where('household_id', $hh)
@@ -61,7 +61,7 @@ class MealPlanController extends Controller
     public function shoppingList(Request $request): JsonResponse
     {
         $hh = $request->user()->household_id;
-        $start = $request->date('from') ?? CarbonImmutable::now()->startOfWeek();
+        $start = $request->date('from') ?? CarbonImmutable::now($request->user()->getTimezone())->startOfWeek();
         $end = $request->date('to') ?? CarbonImmutable::parse($start)->addDays(6);
 
         $plans = MealPlan::where('household_id', $hh)

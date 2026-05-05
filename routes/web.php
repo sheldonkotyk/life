@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\AppleNotificationController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\TimezoneController;
 use App\Livewire\Availability;
 use App\Livewire\Family;
 use App\Livewire\Planner;
+use App\Livewire\Profile;
 use App\Livewire\Recipes;
 use App\Livewire\ShoppingList;
 use App\Livewire\Tracker;
@@ -25,4 +27,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/shopping', ShoppingList::class);
     Route::get('/tracker', Tracker::class);
     Route::get('/availability', Availability::class);
+    Route::get('/profile', Profile::class)->name('profile');
+    Route::post('/me/timezone', [TimezoneController::class, 'detect']);
 });

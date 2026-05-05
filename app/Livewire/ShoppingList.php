@@ -14,7 +14,7 @@ class ShoppingList extends Component
 
     public function mount(): void
     {
-        $this->weekStart = CarbonImmutable::now()->startOfWeek()->toDateString();
+        $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->startOfWeek()->toDateString();
     }
 
     public function shiftWeek(int $weeks): void

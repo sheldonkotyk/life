@@ -25,7 +25,7 @@ class Availability extends Component
     #[Computed]
     public function days(): array
     {
-        $start = CarbonImmutable::today();
+        $start = CarbonImmutable::today(auth()->user()->getTimezone());
         return array_map(fn ($i) => $start->addDays($i), range(0, 6));
     }
 
@@ -41,8 +41,9 @@ class Availability extends Component
     {
         if (! $this->memberId) return [];
 
-        $start = CarbonImmutable::today()->toDateString();
-        $end = CarbonImmutable::today()->addDays(6)->toDateString();
+        $today = CarbonImmutable::today(auth()->user()->getTimezone());
+        $start = $today->toDateString();
+        $end = $today->addDays(6)->toDateString();
 
         return FamilyMemberUnavailability::where('family_member_id', $this->memberId)
             ->whereBetween('date', [$start, $end])
@@ -58,7 +59,7 @@ class Availability extends Component
 
         if ($attend) {
             FamilyMemberUnavailability::where('family_member_id', $this->memberId)
-                ->where('date', $date)->where('slot', $slot)->delete();
+                ->whereDate('date', $date)->where('slot', $slot)->delete();
         } else {
             FamilyMemberUnavailability::firstOrCreate([
                 'family_member_id' => $this->memberId,
@@ -80,7 +81,9 @@ class Availability extends Component
 
         if ($attend) {
             FamilyMemberUnavailability::where('family_member_id', $this->memberId)
-                ->where('slot', $slot)->whereIn('date', $dates)->delete();
+                ->where('slot', $slot)
+                ->whereIn(\Illuminate\Support\Facades\DB::raw('DATE(date)'), $dates)
+                ->delete();
         } else {
             foreach ($dates as $date) {
                 FamilyMemberUnavailability::firstOrCreate([
@@ -101,7 +104,7 @@ class Availability extends Component
 
         if ($attend) {
             FamilyMemberUnavailability::where('family_member_id', $this->memberId)
-                ->where('date', $date)->whereIn('slot', self::SLOTS)->delete();
+                ->whereDate('date', $date)->whereIn('slot', self::SLOTS)->delete();
         } else {
             foreach (self::SLOTS as $slot) {
                 FamilyMemberUnavailability::firstOrCreate([

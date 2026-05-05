@@ -66,6 +66,7 @@
                 />
                 <flux:menu>
                     <flux:menu.group :heading="auth()->user()->household->name ?? 'Household'">
+                        <flux:menu.item icon="user-circle" :href="url('/profile')">Profile</flux:menu.item>
                         <form method="POST" action="{{ url('/logout') }}">@csrf
                             <flux:menu.item icon="arrow-right-start-on-rectangle" as="button" type="submit">Sign out</flux:menu.item>
                         </form>
@@ -83,5 +84,28 @@
     </flux:main>
 
     @fluxScripts
+
+    @auth
+    @if (! auth()->user()->timezone)
+        <script>
+        (function () {
+            try {
+                var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (!tz) return;
+                fetch('{{ url('/me/timezone') }}', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({ timezone: tz }),
+                });
+            } catch (e) {}
+        })();
+        </script>
+    @endif
+    @endauth
 </body>
 </html>
