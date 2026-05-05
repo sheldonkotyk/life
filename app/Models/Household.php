@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
+
+class Household extends Model
+{
+    protected $guarded = [];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Household $h) {
+            $h->invite_code ??= strtoupper(Str::random(8));
+        });
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function members(): HasMany
+    {
+        return $this->hasMany(FamilyMember::class);
+    }
+
+    public function recipes(): HasMany
+    {
+        return $this->hasMany(Recipe::class);
+    }
+
+    public function mealPlans(): HasMany
+    {
+        return $this->hasMany(MealPlan::class);
+    }
+}

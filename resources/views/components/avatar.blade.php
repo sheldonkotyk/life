@@ -1,0 +1,21 @@
+@props([
+    'member',
+    'size' => 'md', // xs, sm, md, lg
+])
+
+@php
+    $sizes = [
+        'xs' => 'w-4 h-4 text-[8px]',
+        'sm' => 'w-5 h-5 text-[10px]',
+        'md' => 'w-7 h-7 text-xs',
+        'lg' => 'w-10 h-10 text-base',
+    ];
+    $classes = $sizes[$size] ?? $sizes['md'];
+    $initial = strtoupper(mb_substr($member->name, 0, 1));
+@endphp
+
+<span
+    {{ $attributes->merge(['class' => "$classes rounded-full inline-flex items-center justify-center text-white font-semibold ring-1 ring-white shadow-sm shrink-0"]) }}
+    style="background-color: {{ $member->color }}"
+    title="{{ $member->name }}"
+>{{ $initial }}</span>
