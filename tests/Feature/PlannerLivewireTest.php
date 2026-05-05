@@ -23,6 +23,24 @@ function makeRecipeWith(int $householdId, array $ingredients, int $servings = 4)
     return $recipe->fresh('ingredients');
 }
 
+it('excludes unavailable members from default attendees on a fresh slot', function () {
+    $user = loginUser();
+    $available = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'In']);
+    $unavailable = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'Out']);
+    \App\Models\FamilyMemberUnavailability::create([
+        'family_member_id' => $unavailable->id,
+        'date' => '2026-05-04',
+        'slot' => 'dinner',
+    ]);
+
+    $component = \Livewire\Livewire::test(\App\Livewire\Planner::class)
+        ->call('openSlot', '2026-05-04', 'dinner');
+
+    expect($component->get('attendees'))
+        ->toContain($available->id)
+        ->not->toContain($unavailable->id);
+});
+
 it('saves a meal plan with skipped ingredients', function () {
     $user = loginUser();
     $recipe = makeRecipeWith($user->household_id, [
