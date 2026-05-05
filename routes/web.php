@@ -8,6 +8,7 @@ use App\Livewire\Family;
 use App\Livewire\HouseholdSettings;
 use App\Livewire\Planner;
 use App\Livewire\Profile;
+use App\Livewire\RecipeBrowser;
 use App\Livewire\Recipes;
 use App\Livewire\ShoppingList;
 use App\Livewire\Tracker;
@@ -31,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/', Planner::class);
     Route::get('/family', Family::class);
     Route::get('/recipes', Recipes::class);
+    Route::get('/recipes/browse', RecipeBrowser::class)->name('recipes.browse');
     Route::get('/shopping', ShoppingList::class);
     Route::get('/tracker', Tracker::class);
     Route::get('/availability', Availability::class);

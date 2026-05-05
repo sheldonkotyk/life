@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    'themealdb' => [
+        'key' => env('THEMEALDB_KEY', '1'),
+        'version' => env('THEMEALDB_VERSION', 'v1'),
+    ],
+
     'apple' => [
         'client_id' => env('APPLE_CLIENT_ID'),
         'client_secret' => env('APPLE_CLIENT_SECRET'),

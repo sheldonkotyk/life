@@ -3,6 +3,7 @@
         <flux:heading size="xl">Recipes</flux:heading>
         <div class="flex gap-2 items-center">
             <flux:input wire:model.live.debounce.300ms="search" placeholder="Search…" icon="magnifying-glass" size="sm" />
+            <flux:button :href="url('/recipes/browse')" variant="ghost" icon="globe-alt" size="sm">Browse catalog</flux:button>
             <flux:button wire:click="startCreate" variant="primary" icon="plus">New recipe</flux:button>
         </div>
     </div>
