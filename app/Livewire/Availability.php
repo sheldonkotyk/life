@@ -152,6 +152,7 @@ class Availability extends Component
 
     public function render()
     {
-        return view('livewire.availability');
+        $today = CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
+        return view('livewire.availability', compact('today'));
     }
 }

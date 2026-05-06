@@ -191,6 +191,8 @@ class Planner extends Component
             }
         }
 
-        return view('livewire.planner', compact('days', 'plans', 'members', 'recipes', 'availableLeftovers', 'start', 'activeIngredients', 'activeRecipeServings'));
+        $today = CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
+
+        return view('livewire.planner', compact('days', 'plans', 'members', 'recipes', 'availableLeftovers', 'start', 'activeIngredients', 'activeRecipeServings', 'today'));
     }
 }

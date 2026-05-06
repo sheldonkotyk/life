@@ -29,7 +29,7 @@
         @foreach ($this->days as $d)
             @php
                 $dateStr = $d->toDateString();
-                $isToday = $d->isToday();
+                $isToday = $d->toDateString() === $today;
                 $slotState = collect(\App\Livewire\Availability::SLOTS)
                     ->mapWithKeys(fn ($s) => [$s => ! in_array($dateStr . '|' . $s, $this->unavailableKeys)])
                     ->all();
@@ -104,7 +104,7 @@
                 @foreach ($this->days as $d)
                     @php
                         $dateStr = $d->toDateString();
-                        $isToday = $d->isToday();
+                        $isToday = $d->toDateString() === $today;
                         $allIn = collect(\App\Livewire\Availability::SLOTS)
                             ->every(fn ($s) => ! in_array($dateStr . '|' . $s, $this->unavailableKeys));
                     @endphp

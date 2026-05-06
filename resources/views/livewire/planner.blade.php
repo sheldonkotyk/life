@@ -12,7 +12,7 @@
     {{-- Mobile: stacked by day --}}
     <div class="lg:hidden space-y-3">
         @foreach ($days as $d)
-            @php $isToday = $d->isToday(); @endphp
+            @php $isToday = $d->toDateString() === $today; @endphp
             <flux:card class="p-0! overflow-hidden">
                 <div class="flex items-baseline justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-700 {{ $isToday ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'bg-zinc-50 dark:bg-zinc-800/50' }}">
                     <div class="font-semibold {{ $isToday ? 'text-indigo-700 dark:text-indigo-300' : '' }}">{{ $d->format('l') }}</div>
@@ -65,7 +65,7 @@
                 <tr class="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
                     <th class="text-left p-2 font-semibold text-zinc-600 w-24"></th>
                     @foreach ($days as $d)
-                        @php $isToday = $d->isToday(); @endphp
+                        @php $isToday = $d->toDateString() === $today; @endphp
                         <th class="text-left p-2 font-semibold {{ $isToday ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-zinc-600 dark:text-zinc-300' }}">
                             <div>{{ $d->format('D') }}</div>
                             <div class="text-xs font-normal text-zinc-400">{{ $d->format('M j') }}</div>
