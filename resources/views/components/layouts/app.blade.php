@@ -64,16 +64,35 @@
                     initials="{{ strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}"
                     avatar="{{ auth()->user()->avatar }}"
                 />
+                @php
+                    $currentUser = auth()->user();
+                    $userHouseholds = $currentUser->households()->orderBy('name')->get();
+                @endphp
                 <flux:menu>
-                    <flux:menu.group :heading="auth()->user()->household->name ?? 'Household'">
+                    <flux:menu.group :heading="$currentUser->household->name ?? 'Household'">
                         <flux:menu.item icon="user-circle" :href="url('/profile')">Profile</flux:menu.item>
-                        @if (auth()->user()->household)
+                        @if ($currentUser->household)
                             <flux:menu.item icon="home" :href="url('/household')">Household</flux:menu.item>
                         @endif
                         <form method="POST" action="{{ url('/logout') }}">@csrf
                             <flux:menu.item icon="arrow-right-start-on-rectangle" as="button" type="submit">Sign out</flux:menu.item>
                         </form>
                     </flux:menu.group>
+
+                    @if ($userHouseholds->count() > 1)
+                        <flux:menu.separator />
+                        <flux:menu.group heading="Switch household">
+                            @foreach ($userHouseholds as $h)
+                                @if ($h->id === $currentUser->household_id)
+                                    <flux:menu.item icon="check">{{ $h->name }}</flux:menu.item>
+                                @else
+                                    <form method="POST" action="{{ route('household.switch', $h) }}">@csrf
+                                        <flux:menu.item as="button" type="submit" icon="arrow-right-circle">{{ $h->name }}</flux:menu.item>
+                                    </form>
+                                @endif
+                            @endforeach
+                        </flux:menu.group>
+                    @endif
                 </flux:menu>
             </flux:dropdown>
         </flux:header>

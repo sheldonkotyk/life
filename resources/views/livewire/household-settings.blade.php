@@ -8,13 +8,10 @@
     @endif
 
     <flux:card>
-        <form wire:submit="save" class="space-y-4">
-            <flux:input wire:model="name" label="Household name" required :readonly="! $this->canManage" />
-
+        <form wire:submit="save" class="flex items-start gap-2">
+            <flux:input wire:model="name" placeholder="Household name" required :readonly="! $this->canManage" />
             @if ($this->canManage)
-                <div class="flex justify-end">
-                    <flux:button type="submit" variant="primary">Save</flux:button>
-                </div>
+                <flux:button type="submit" variant="primary">Save</flux:button>
             @endif
         </form>
     </flux:card>
@@ -59,6 +56,58 @@
                 @endif
             </div>
         </div>
+    </flux:card>
+
+    @php $isSoleMember = $members->count() === 1; @endphp
+    <flux:card>
+        <flux:heading size="lg">Leave household</flux:heading>
+        <flux:text size="sm" variant="subtle" class="mb-3">
+            @if ($isSoleMember)
+                You're the only member. Leaving will permanently delete this household and all its data (recipes, meal plans, family members).
+            @else
+                You'll be removed from this household. You can rejoin later with the invite code.
+            @endif
+        </flux:text>
+
+        @if ($isSoleMember)
+            <flux:button
+                type="button"
+                variant="danger"
+                wire:click="leaveAndDeleteHousehold"
+                wire:confirm="Permanently delete this household and all its data? This cannot be undone."
+            >
+                Delete household
+            </flux:button>
+        @elseif ($choosingSuccessor)
+            @php $candidates = $members->where('id', '!=', auth()->id()); @endphp
+            <flux:text class="mb-2">You're the only admin. Choose who should take over before you leave:</flux:text>
+            <flux:select wire:model="successorId" placeholder="Select a member" class="mb-3">
+                @foreach ($candidates as $candidate)
+                    <flux:select.option value="{{ $candidate->id }}">{{ $candidate->name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+            @error('successorId') <flux:text size="sm" class="text-red-600 mb-2">{{ $message }}</flux:text> @enderror
+            <div class="flex gap-2">
+                <flux:button
+                    type="button"
+                    variant="danger"
+                    wire:click="confirmLeaveWithSuccessor"
+                    wire:confirm="Promote selected member to admin and leave this household?"
+                >
+                    Promote and leave
+                </flux:button>
+                <flux:button type="button" variant="ghost" wire:click="cancelLeave">Cancel</flux:button>
+            </div>
+        @else
+            <flux:button
+                type="button"
+                variant="danger"
+                wire:click="leaveHousehold"
+                wire:confirm="Leave this household?"
+            >
+                Leave household
+            </flux:button>
+        @endif
     </flux:card>
 
     <flux:card>

@@ -279,6 +279,16 @@ class AuthController extends Controller
         return redirect('/login');
     }
 
+    public function switchHousehold(Request $request, Household $household): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->households()->where('households.id', $household->id)->exists(), 403);
+
+        $user->forceFill(['household_id' => $household->id])->save();
+
+        return back()->with('status', 'Switched to ' . $household->name . '.');
+    }
+
     public function devLogin(Request $request, User $user): RedirectResponse
     {
         abort_unless(app()->environment('local'), 404);

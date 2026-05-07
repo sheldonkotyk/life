@@ -15,6 +15,8 @@ class HouseholdSettings extends Component
     public string $name = '';
     public string $inviteCode = '';
     public string $joinCode = '';
+    public bool $choosingSuccessor = false;
+    public ?int $successorId = null;
 
     public function mount(): void
     {
@@ -113,6 +115,97 @@ class HouseholdSettings extends Component
 
         $household->users()->updateExistingPivot($userId, ['role' => null]);
         session()->flash('status', 'Administrator removed.');
+    }
+
+    public function leaveHousehold(): void
+    {
+        $user = auth()->user();
+        $household = $this->household();
+
+        if ($household->users()->count() <= 1) {
+            return;
+        }
+
+        $isSoleAdmin = $household->admins()->count() === 1
+            && $household->admins()->where('users.id', $user->id)->exists();
+        $otherMembers = $household->users()->where('users.id', '!=', $user->id);
+
+        if ($isSoleAdmin) {
+            if ($otherMembers->count() === 1) {
+                $household->users()->updateExistingPivot($otherMembers->first()->id, ['role' => 'admin']);
+            } else {
+                $this->choosingSuccessor = true;
+                return;
+            }
+        }
+
+        $this->finalizeLeave($user, $household);
+    }
+
+    public function confirmLeaveWithSuccessor(): void
+    {
+        $user = auth()->user();
+        $household = $this->household();
+
+        $this->validate([
+            'successorId' => ['required', 'integer'],
+        ]);
+
+        abort_unless(
+            $household->users()->where('users.id', $this->successorId)->where('users.id', '!=', $user->id)->exists(),
+            422
+        );
+
+        $household->users()->updateExistingPivot($this->successorId, ['role' => 'admin']);
+        $this->choosingSuccessor = false;
+        $this->finalizeLeave($user, $household);
+    }
+
+    public function cancelLeave(): void
+    {
+        $this->choosingSuccessor = false;
+        $this->successorId = null;
+    }
+
+    private function finalizeLeave(\App\Models\User $user, Household $household): void
+    {
+        $household->users()->detach($user->id);
+        $this->moveToFallbackHousehold($user);
+
+        session()->flash('status', 'You left ' . $household->name . '.');
+        $this->redirectRoute('household', navigate: true);
+    }
+
+    public function leaveAndDeleteHousehold(): void
+    {
+        $user = auth()->user();
+        $household = $this->household();
+
+        if ($household->users()->where('users.id', '!=', $user->id)->exists()) {
+            return;
+        }
+
+        $household->users()->detach($user->id);
+        $name = $household->name;
+        $household->delete();
+
+        $this->moveToFallbackHousehold($user);
+
+        session()->flash('status', 'Deleted ' . $name . '.');
+        $this->redirectRoute('household', navigate: true);
+    }
+
+    private function moveToFallbackHousehold(\App\Models\User $user): void
+    {
+        $next = $user->households()->orderBy('households.id')->first();
+
+        if (! $next) {
+            $next = Household::create(['name' => ($user->name ?: 'Your') . "'s Household"]);
+            $user->joinHousehold($next);
+            return;
+        }
+
+        $user->forceFill(['household_id' => $next->id])->save();
     }
 
     private function household(): Household

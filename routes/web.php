@@ -42,5 +42,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/availability', Availability::class);
     Route::get('/profile', Profile::class)->name('profile');
     Route::get('/household', HouseholdSettings::class)->name('household');
+    Route::post('/household/switch/{household}', [AuthController::class, 'switchHousehold'])->name('household.switch');
     Route::post('/me/timezone', [TimezoneController::class, 'detect']);
 });
