@@ -36,7 +36,7 @@
                                         <div class="text-[11px] text-zinc-500 mt-0.5">{{ round($mp['calories']) }} kcal · P{{ $mp['protein_g'] }} C{{ $mp['carbs_g'] }} F{{ $mp['fat_g'] }}</div>
                                     @endif
                                     <div class="flex flex-wrap gap-0.5 mt-1 items-center">
-                                        @foreach ($plan->attendees as $a)
+                                        @foreach ($plan->confirmedAttendees() as $a)
                                             <x-avatar :member="$a" size="xs" />
                                         @endforeach
                                         @if ($plan->save_leftovers)
@@ -109,7 +109,7 @@
                                             <div class="text-[10px] text-zinc-500 mt-0.5">{{ round($mp['calories']) }} kcal · P{{ $mp['protein_g'] }} C{{ $mp['carbs_g'] }} F{{ $mp['fat_g'] }}</div>
                                         @endif
                                         <div class="flex flex-wrap gap-0.5 mt-1 items-center">
-                                            @foreach ($plan->attendees as $a)
+                                            @foreach ($plan->confirmedAttendees() as $a)
                                                 <x-avatar :member="$a" size="xs" />
                                             @endforeach
                                             @if ($plan->save_leftovers)
