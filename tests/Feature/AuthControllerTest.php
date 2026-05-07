@@ -26,7 +26,7 @@ it('exposes dev users on the login page in local env', function () {
 });
 
 it('redirects to apple via socialite', function () {
-    Socialite::shouldReceive('driver->scopes->redirect')
+    Socialite::shouldReceive('driver->scopes->with->redirect')
         ->andReturn(redirect('https://appleid.apple.com/auth/authorize'));
 
     $this->get('/auth/apple/redirect')->assertRedirect('https://appleid.apple.com/auth/authorize');
@@ -38,7 +38,7 @@ it('provisions a new user on apple callback', function () {
     $apple->shouldReceive('getEmail')->andReturn('cb@example.test');
     $apple->shouldReceive('getName')->andReturn('CB User');
     $apple->shouldReceive('getAvatar')->andReturn(null);
-    Socialite::shouldReceive('driver->user')->andReturn($apple);
+    Socialite::shouldReceive('driver->stateless->user')->andReturn($apple);
 
     $this->get('/auth/apple/callback')->assertRedirect('/');
 
@@ -68,7 +68,7 @@ it('reuses an existing user on apple callback', function () {
     $apple->shouldReceive('getEmail')->andReturn(null);
     $apple->shouldReceive('getName')->andReturn(null);
     $apple->shouldReceive('getAvatar')->andReturn(null);
-    Socialite::shouldReceive('driver->user')->andReturn($apple);
+    Socialite::shouldReceive('driver->stateless->user')->andReturn($apple);
 
     $this->get('/auth/apple/callback')->assertRedirect('/');
 

@@ -48,7 +48,7 @@
                             @if ($cellPlans->isEmpty())
                                 <button
                                     wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                    class="w-full text-left text-sm text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1.5 px-2 rounded">
+                                    class="w-full text-left text-base font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-3 px-3 rounded-md">
                                     <div>+ add</div>
                                     @php $defaults = $defaultAttendees[$key] ?? collect(); @endphp
                                     @if ($defaults->isNotEmpty())
@@ -62,7 +62,7 @@
                             @else
                                 <button
                                     wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                    class="w-full text-sm text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1.5 rounded">
+                                    class="w-full text-base font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2.5 rounded-md mt-1">
                                     + add
                                 </button>
                             @endif
@@ -121,7 +121,7 @@
                                 @if ($cellPlans->isEmpty())
                                     <button
                                         wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                        class="w-full text-left text-xs text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1 px-2 rounded">
+                                        class="w-full text-left text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2.5 px-2 rounded-md">
                                         <div>+ add</div>
                                         @php $defaults = $defaultAttendees[$key] ?? collect(); @endphp
                                         @if ($defaults->isNotEmpty())
@@ -135,7 +135,7 @@
                                 @else
                                     <button
                                         wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                        class="w-full text-xs text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1 rounded">
+                                        class="w-full text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2 rounded-md mt-1">
                                         + add
                                     </button>
                                 @endif
@@ -184,6 +184,15 @@
                             <flux:select.option value="{{ $r->id }}">{{ $r->name }}@if ($r->makes_leftovers) (leftovers) @endif</flux:select.option>
                         @endforeach
                     </flux:select>
+                    <div class="flex gap-2 mt-2">
+                        <flux:input
+                            class:input="grow"
+                            wire:model="newRecipeName"
+                            wire:keydown.enter.prevent="createRecipeFromName"
+                            placeholder="New recipe name"
+                        />
+                        <flux:button icon="plus" wire:click="createRecipeFromName">Create</flux:button>
+                    </div>
                 </flux:field>
 
                 @if ($activeIngredients->isNotEmpty())

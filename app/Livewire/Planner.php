@@ -38,6 +38,8 @@ class Planner extends Component
 
     public array $skippedIngredientIds = [];
 
+    public string $newRecipeName = '';
+
     public function mount(): void
     {
         $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->toDateString();
@@ -91,7 +93,25 @@ class Planner extends Component
 
     public function cancelEdit(): void
     {
-        $this->reset(['editingPlanId', 'editingDate', 'editingSlot', 'selectedRecipeId', 'selectedLeftoverId', 'customName', 'notes', 'saveLeftovers', 'leftoverServings', 'attendees', 'skippedIngredientIds']);
+        $this->reset(['editingPlanId', 'editingDate', 'editingSlot', 'selectedRecipeId', 'selectedLeftoverId', 'customName', 'notes', 'saveLeftovers', 'leftoverServings', 'attendees', 'skippedIngredientIds', 'newRecipeName']);
+    }
+
+    public function createRecipeFromName(): void
+    {
+        $name = trim($this->newRecipeName);
+        if ($name === '') {
+            return;
+        }
+
+        $recipe = Recipe::create([
+            'household_id' => auth()->user()->household_id,
+            'name' => $name,
+            'servings' => 4,
+        ]);
+
+        $this->selectedRecipeId = $recipe->id;
+        $this->selectedLeftoverId = null;
+        $this->newRecipeName = '';
     }
 
     public function savePlan(): void
@@ -163,7 +183,7 @@ class Planner extends Component
         $days = collect(range(0, 6))->map(fn ($i) => $start->addDays($i));
 
         $plans = MealPlan::where('household_id', $hh)
-            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->whereBetween('date', [$start->startOfDay(), $end->endOfDay()])
             ->with('recipe.ingredients', 'attendees.user', 'leftoverOf.recipe.ingredients', 'skippedIngredients')
             ->get()
             ->groupBy(fn ($p) => $p->date->toDateString().'|'.$p->slot);
@@ -172,7 +192,7 @@ class Planner extends Component
         $recipes = Recipe::where('household_id', $hh)->orderBy('name')->get();
 
         $unavailabilities = FamilyMemberUnavailability::whereIn('family_member_id', $members->pluck('id'))
-            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->whereBetween('date', [$start->startOfDay(), $end->endOfDay()])
             ->get()
             ->groupBy(fn ($u) => $u->date->toDateString().'|'.$u->slot)
             ->map(fn ($group) => $group->pluck('family_member_id')->all());

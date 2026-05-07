@@ -29,7 +29,7 @@ class ShoppingList extends Component
         $end = $start->addDays(6);
 
         $plans = MealPlan::where('household_id', $hh)
-            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->whereBetween('date', [$start->startOfDay(), $end->endOfDay()])
             ->whereNotNull('recipe_id')
             ->whereNull('leftover_of_id')
             ->with('recipe.ingredients', 'attendees')
@@ -42,7 +42,7 @@ class ShoppingList extends Component
             $scale = $eaters / $servings;
             foreach ($plan->recipe->ingredients as $ing) {
                 $cat = $ing->category ?: 'Other';
-                $key = strtolower(trim($ing->name . '|' . ($ing->unit ?? '')));
+                $key = strtolower(trim($ing->name.'|'.($ing->unit ?? '')));
                 if (! isset($grouped[$cat][$key])) {
                     $grouped[$cat][$key] = [
                         'name' => $ing->name,
@@ -63,7 +63,9 @@ class ShoppingList extends Component
         }
 
         ksort($grouped);
-        foreach ($grouped as &$items) ksort($items);
+        foreach ($grouped as &$items) {
+            ksort($items);
+        }
 
         return view('livewire.shopping-list', compact('grouped', 'start', 'plans'));
     }

@@ -77,7 +77,7 @@ class Availability extends Component
         $isGuest = (bool) $this->selectedMember?->is_guest;
 
         $overrideKeys = FamilyMemberUnavailability::where('family_member_id', $this->memberId)
-            ->whereBetween('date', [$weekStart->toDateString(), $weekStart->addDays(6)->toDateString()])
+            ->whereBetween('date', [$weekStart->startOfDay(), $weekStart->addDays(6)->endOfDay()])
             ->get()
             ->map(fn ($u) => $u->date->toDateString().'|'.$u->slot)
             ->all();
