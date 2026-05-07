@@ -106,12 +106,7 @@
                     <div class="flex items-center gap-3">
                         <x-avatar :member="$m" size="lg" />
                         <div>
-                            <div class="flex items-center gap-2">
-                                <flux:heading size="lg">{{ $m->name }}</flux:heading>
-                                @if ($m->is_guest)
-                                    <flux:badge size="sm" color="amber">Guest</flux:badge>
-                                @endif
-                            </div>
+                            <flux:heading size="lg">{{ $m->name }}</flux:heading>
                             <flux:text size="sm" variant="subtle">
                                 {{ $m->is_child ? 'Child' : 'Adult' }}
                                 @if ($m->user) · has account @endif
@@ -163,4 +158,65 @@
             </flux:card>
         @endforeach
     </div>
+
+    @if ($guests->isNotEmpty())
+        <flux:heading size="lg" class="mt-8">Guests</flux:heading>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @foreach ($guests as $m)
+                <flux:card>
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3">
+                            <x-avatar :member="$m" size="lg" />
+                            <div>
+                                <flux:heading size="lg">{{ $m->name }}</flux:heading>
+                                @if ($m->notes)
+                                    <flux:text size="sm" variant="subtle">{{ $m->notes }}</flux:text>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            <flux:button size="sm" variant="ghost" wire:click="edit({{ $m->id }})">Edit</flux:button>
+                            <flux:button size="sm" variant="danger" wire:click="delete({{ $m->id }})" wire:confirm="Remove {{ $m->name }}?">Remove</flux:button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 space-y-3">
+                        @foreach (['like' => '👍 Likes', 'dislike' => '👎 Dislikes', 'allergy' => '⚠️ Allergies'] as $type => $label)
+                            @php $items = $m->preferences->where('type', $type); @endphp
+                            @if ($items->isNotEmpty())
+                                <div>
+                                    <flux:text size="xs" class="uppercase tracking-wide text-zinc-400">{{ $label }}</flux:text>
+                                    <div class="flex flex-wrap gap-1 mt-1">
+                                        @foreach ($items as $p)
+                                            <flux:badge size="sm" color="zinc">
+                                                {{ $p->food }}
+                                                <button wire:click="removePreference({{ $p->id }})" class="ms-1 text-zinc-400 hover:text-red-500" title="Remove">×</button>
+                                            </flux:badge>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                        @endforeach
+
+                        @if ($prefMemberId === $m->id)
+                            <div class="mt-3 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 grid grid-cols-1 sm:grid-cols-5 gap-2">
+                                <div class="sm:col-span-2">
+                                    <flux:input wire:model="prefFood" placeholder="Food" size="sm" />
+                                </div>
+                                <flux:select wire:model="prefType" size="sm">
+                                    <flux:select.option value="like">Like</flux:select.option>
+                                    <flux:select.option value="dislike">Dislike</flux:select.option>
+                                    <flux:select.option value="allergy">Allergy</flux:select.option>
+                                </flux:select>
+                                <flux:input wire:model="prefNotes" placeholder="Notes (optional)" size="sm" />
+                                <flux:button size="sm" variant="primary" wire:click="addPreference({{ $m->id }})">Add</flux:button>
+                            </div>
+                        @else
+                            <flux:button size="xs" variant="ghost" wire:click="startAddingPreference({{ $m->id }})">+ Add food preference</flux:button>
+                        @endif
+                    </div>
+                </flux:card>
+            @endforeach
+        </div>
+    @endif
 </div>

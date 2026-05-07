@@ -192,7 +192,8 @@ class Family extends Component
     public function render()
     {
         return view('livewire.family', [
-            'members' => $this->householdMembers()->visible()->with('preferences', 'user')->orderBy('is_child')->orderBy('name')->get(),
+            'members' => $this->householdMembers()->where('is_guest', false)->with('preferences', 'user')->orderBy('is_child')->orderBy('name')->get(),
+            'guests' => $this->householdMembers()->where('is_guest', true)->with('preferences', 'user')->orderBy('name')->get(),
         ]);
     }
 }
