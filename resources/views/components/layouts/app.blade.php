@@ -20,7 +20,7 @@
     @auth
         @php $here = trim(request()->path(), '/'); @endphp
         <flux:header sticky class="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-4 lg:px-8">
-            <flux:brand href="{{ url('/') }}" name="Life" class="!me-6">
+            <flux:brand href="{{ url('/plan') }}" name="Life" class="!me-6">
                 <x-slot name="logo">
                     <span class="text-xl">✦</span>
                 </x-slot>
@@ -28,7 +28,7 @@
 
             <flux:navbar class="-mb-px">
                 @foreach ([
-                    '' => 'Plan',
+                    'plan' => 'Plan',
                     'availability' => 'Attendance',
                     'family' => 'Family',
                     'recipes' => 'Recipes',

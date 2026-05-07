@@ -14,6 +14,10 @@ use App\Livewire\ShoppingList;
 use App\Livewire\Tracker;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/', function () {
+    return auth()->check() ? redirect('/plan') : view('landing');
+})->name('home');
+
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::get('/join/{code}', [AuthController::class, 'joinViaLink'])->name('login.invite.link');
 Route::post('/login/invite', [AuthController::class, 'applyInvite'])->name('login.invite');
@@ -29,7 +33,7 @@ Route::post('/dev-login/{user}', [AuthController::class, 'devLogin']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
 Route::middleware('auth')->group(function () {
-    Route::get('/', Planner::class);
+    Route::get('/plan', Planner::class)->name('plan');
     Route::get('/family', Family::class);
     Route::get('/recipes', Recipes::class);
     Route::get('/recipes/browse', RecipeBrowser::class)->name('recipes.browse');
