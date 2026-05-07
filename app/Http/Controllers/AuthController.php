@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -80,23 +81,29 @@ class AuthController extends Controller
         return back();
     }
 
-    public function redirectToApple(): RedirectResponse
+    public function redirectToApple(Request $request): RedirectResponse
     {
+        $state = Crypt::encryptString(json_encode([
+            'nonce' => Str::random(32),
+            'invite' => $request->session()->pull('pending_invite_code'),
+        ]));
+
         return Socialite::driver('apple')
             ->scopes(['name', 'email'])
+            ->with(['state' => $state])
             ->redirect();
     }
 
-    public function appleCallback(): RedirectResponse
+    public function appleCallback(Request $request): RedirectResponse
     {
-        $appleUser = Socialite::driver('apple')->user();
+        $invitedHousehold = $this->householdFromAppleState($request->input('state'));
+
+        $appleUser = Socialite::driver('apple')->stateless()->user();
 
         $user = User::firstOrNew(['apple_sub' => $appleUser->getId()]);
         $user->email = $appleUser->getEmail() ?: $user->email ?: ($appleUser->getId() . '@apple.private');
         $user->name = $appleUser->getName() ?: $user->name ?: 'You';
         $user->avatar = $appleUser->getAvatar() ?: $user->avatar;
-
-        $invitedHousehold = $this->pullInvitedHousehold();
 
         $newHousehold = null;
         if (! $user->household_id && ! $invitedHousehold) {
@@ -287,6 +294,26 @@ class AuthController extends Controller
     private function pullInvitedHousehold(): ?Household
     {
         $code = session()->pull('pending_invite_code');
+        if (! $code) {
+            return null;
+        }
+
+        return Household::where('invite_code', strtoupper($code))->first();
+    }
+
+    private function householdFromAppleState(?string $state): ?Household
+    {
+        if (! $state) {
+            return null;
+        }
+
+        try {
+            $payload = json_decode(Crypt::decryptString($state), true);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $code = $payload['invite'] ?? null;
         if (! $code) {
             return null;
         }
