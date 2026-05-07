@@ -13,7 +13,7 @@ class FamilyMember extends Model
 
     protected $casts = [
         'is_child' => 'bool',
-        'birthday' => 'date',
+        'is_guest' => 'bool',
         'target_calories' => 'float',
         'target_protein_g' => 'float',
         'target_carbs_g' => 'float',
@@ -63,5 +63,10 @@ class FamilyMember extends Model
     public function unavailabilities(): HasMany
     {
         return $this->hasMany(FamilyMemberUnavailability::class);
+    }
+
+    public function scopeVisible($query)
+    {
+        return $query->where(fn ($q) => $q->where('is_guest', false)->orWhereHas('meals'));
     }
 }

@@ -11,20 +11,34 @@ use Livewire\Component;
 class Family extends Component
 {
     public ?int $editingId = null;
+
     public string $name = '';
+
     public string $color = '#6366f1';
+
     public bool $isChild = false;
-    public ?string $birthday = null;
+
+    public bool $isGuest = false;
+
     public string $notes = '';
+
     public ?float $targetCalories = null;
+
     public ?float $targetProteinG = null;
+
     public ?float $targetCarbsG = null;
+
     public ?float $targetFatG = null;
 
     public ?int $prefMemberId = null;
+
     public string $prefFood = '';
+
     public string $prefType = 'like';
+
     public string $prefNotes = '';
+
+    public string $newAllergy = '';
 
     public function rules(): array
     {
@@ -32,7 +46,7 @@ class Family extends Component
             'name' => ['required', 'string', 'max:60'],
             'color' => ['required', 'string', 'max:7'],
             'isChild' => ['boolean'],
-            'birthday' => ['nullable', 'date'],
+            'isGuest' => ['boolean'],
             'notes' => ['nullable', 'string', 'max:500'],
             'targetCalories' => ['nullable', 'numeric', 'min:0'],
             'targetProteinG' => ['nullable', 'numeric', 'min:0'],
@@ -49,7 +63,7 @@ class Family extends Component
             'name' => $this->name,
             'color' => $this->color,
             'is_child' => $this->isChild,
-            'birthday' => $this->birthday ?: null,
+            'is_guest' => $this->isGuest,
             'notes' => $this->notes ?: null,
             'target_calories' => $this->targetCalories ?: null,
             'target_protein_g' => $this->targetProteinG ?: null,
@@ -82,7 +96,7 @@ class Family extends Component
         $this->name = $m->name;
         $this->color = $m->color;
         $this->isChild = $m->is_child;
-        $this->birthday = $m->birthday?->format('Y-m-d');
+        $this->isGuest = $m->is_guest;
         $this->notes = $m->notes ?? '';
         $this->targetCalories = $m->target_calories;
         $this->targetProteinG = $m->target_protein_g;
@@ -99,8 +113,21 @@ class Family extends Component
 
     public function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'color', 'isChild', 'birthday', 'notes', 'targetCalories', 'targetProteinG', 'targetCarbsG', 'targetFatG']);
+        $this->reset(['editingId', 'name', 'color', 'isChild', 'isGuest', 'notes', 'targetCalories', 'targetProteinG', 'targetCarbsG', 'targetFatG', 'newAllergy']);
         $this->color = '#6366f1';
+    }
+
+    public function getEditingAllergiesProperty()
+    {
+        if (! $this->editingId) {
+            return collect();
+        }
+
+        return FoodPreference::whereHas('familyMember', fn ($q) => $q->where('household_id', auth()->user()->household_id))
+            ->where('family_member_id', $this->editingId)
+            ->where('type', 'allergy')
+            ->orderBy('food')
+            ->get();
     }
 
     public function addPreference(int $memberId): void
@@ -122,9 +149,29 @@ class Family extends Component
         $this->prefMemberId = null;
     }
 
+    public function addAllergy(): void
+    {
+        if (! $this->editingId) {
+            return;
+        }
+
+        $this->validate([
+            'newAllergy' => ['required', 'string', 'max:80'],
+        ]);
+
+        $member = $this->householdMembers()->findOrFail($this->editingId);
+        FoodPreference::create([
+            'family_member_id' => $member->id,
+            'food' => trim($this->newAllergy),
+            'type' => 'allergy',
+        ]);
+
+        $this->newAllergy = '';
+    }
+
     public function removePreference(int $prefId): void
     {
-        FoodPreference::whereHas('familyMember', fn($q) => $q->where('household_id', auth()->user()->household_id))
+        FoodPreference::whereHas('familyMember', fn ($q) => $q->where('household_id', auth()->user()->household_id))
             ->where('id', $prefId)
             ->delete();
     }
@@ -145,7 +192,7 @@ class Family extends Component
     public function render()
     {
         return view('livewire.family', [
-            'members' => $this->householdMembers()->with('preferences', 'user')->orderBy('is_child')->orderBy('name')->get(),
+            'members' => $this->householdMembers()->visible()->with('preferences', 'user')->orderBy('is_child')->orderBy('name')->get(),
         ]);
     }
 }

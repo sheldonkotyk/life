@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -22,6 +23,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'birthday' => 'date',
         ];
     }
 
@@ -33,7 +35,7 @@ class User extends Authenticatable
     public function getAvatarAttribute(?string $value): ?string
     {
         if ($value) {
-            return $value;
+            return str_starts_with($value, 'http') ? $value : Storage::disk('public')->url($value);
         }
 
         if (! $this->email) {

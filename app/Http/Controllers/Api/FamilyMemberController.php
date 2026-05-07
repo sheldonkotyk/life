@@ -24,10 +24,10 @@ class FamilyMemberController extends Controller
             'name' => ['required', 'string', 'max:60'],
             'color' => ['nullable', 'string', 'max:7'],
             'is_child' => ['boolean'],
-            'birthday' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
         $data['household_id'] = $request->user()->household_id;
+
         return response()->json(FamilyMember::create($data), 201);
     }
 
@@ -38,9 +38,9 @@ class FamilyMemberController extends Controller
             'name' => ['sometimes', 'string', 'max:60'],
             'color' => ['sometimes', 'string', 'max:7'],
             'is_child' => ['sometimes', 'boolean'],
-            'birthday' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:500'],
         ]));
+
         return response()->json($member);
     }
 
@@ -48,6 +48,7 @@ class FamilyMemberController extends Controller
     {
         $this->authorizeMember($request, $member);
         $member->delete();
+
         return response()->json(['ok' => true]);
     }
 
@@ -60,6 +61,7 @@ class FamilyMemberController extends Controller
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
         $data['family_member_id'] = $member->id;
+
         return response()->json(FoodPreference::create($data), 201);
     }
 
@@ -67,6 +69,7 @@ class FamilyMemberController extends Controller
     {
         $this->authorizeMember($request, $preference->familyMember);
         $preference->delete();
+
         return response()->json(['ok' => true]);
     }
 

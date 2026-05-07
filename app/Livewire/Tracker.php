@@ -33,6 +33,7 @@ class Tracker extends Component
         $hh = auth()->user()->household_id;
 
         $members = FamilyMember::where('household_id', $hh)
+            ->visible()
             ->orderBy('is_child')
             ->orderBy('name')
             ->get();
@@ -41,7 +42,7 @@ class Tracker extends Component
             ->whereDate('date', $this->date)
             ->with('recipe.ingredients', 'leftoverOf.recipe.ingredients', 'skippedIngredients', 'attendees')
             ->get()
-            ->sortBy(fn($p) => array_search($p->slot, ['breakfast', 'lunch', 'dinner', 'snack']))
+            ->sortBy(fn ($p) => array_search($p->slot, ['breakfast', 'lunch', 'dinner', 'snack']))
             ->values();
 
         $consumed = [];
@@ -54,8 +55,12 @@ class Tracker extends Component
         foreach ($plans as $plan) {
             $macros = $plan->macrosPerServing();
             foreach ($plan->attendees as $att) {
-                if (! isset($consumed[$att->id])) continue;
-                foreach ($macros as $k => $v) $consumed[$att->id][$k] += $v;
+                if (! isset($consumed[$att->id])) {
+                    continue;
+                }
+                foreach ($macros as $k => $v) {
+                    $consumed[$att->id][$k] += $v;
+                }
                 $perMemberMeals[$att->id][] = [
                     'name' => $plan->displayName(),
                     'slot' => $plan->slot,

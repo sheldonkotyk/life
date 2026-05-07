@@ -15,9 +15,11 @@
             <flux:text size="sm" variant="subtle" class="w-full sm:w-auto sm:ml-2">{{ $weekStartDate->format('M j') }} – {{ $weekStartDate->addDays(6)->format('M j, Y') }}</flux:text>
 
             @if ($this->members->count() > 1)
-                <flux:select wire:model.live="memberId" class:input="w-full sm:w-48 sm:ml-2">
+                <flux:select wire:model.live="memberId" class:input="w-full sm:w-56 sm:ml-2">
                     @foreach ($this->members as $m)
-                        <flux:select.option value="{{ $m->id }}">{{ $m->name }}</flux:select.option>
+                        <flux:select.option value="{{ $m->id }}">
+                            {{ $m->name }}@if ($m->is_guest) (guest)@endif
+                        </flux:select.option>
                     @endforeach
                 </flux:select>
             @endif
@@ -31,7 +33,7 @@
                 $dateStr = $d->toDateString();
                 $isToday = $d->toDateString() === $today;
                 $slotState = collect(\App\Livewire\Availability::SLOTS)
-                    ->mapWithKeys(fn ($s) => [$s => ! in_array($dateStr . '|' . $s, $this->unavailableKeys)])
+                    ->mapWithKeys(fn ($s) => [$s => ! in_array($dateStr . '|' . $s, $this->notAttendingKeys)])
                     ->all();
             @endphp
             <div
@@ -86,7 +88,7 @@
                     @foreach (\App\Livewire\Availability::SLOTS as $slot)
                         @php
                             $allSlotIn = collect($this->days)->every(
-                                fn ($d) => ! in_array($d->toDateString() . '|' . $slot, $this->unavailableKeys)
+                                fn ($d) => ! in_array($d->toDateString() . '|' . $slot, $this->notAttendingKeys)
                             );
                         @endphp
                         <th class="text-center p-3 font-semibold text-zinc-600 dark:text-zinc-300 capitalize">
@@ -106,7 +108,7 @@
                         $dateStr = $d->toDateString();
                         $isToday = $d->toDateString() === $today;
                         $allIn = collect(\App\Livewire\Availability::SLOTS)
-                            ->every(fn ($s) => ! in_array($dateStr . '|' . $s, $this->unavailableKeys));
+                            ->every(fn ($s) => ! in_array($dateStr . '|' . $s, $this->notAttendingKeys));
                     @endphp
                     <tr class="border-b border-zinc-100 dark:border-zinc-800 last:border-b-0 {{ $isToday ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : '' }}">
                         <td class="p-3">
@@ -114,7 +116,7 @@
                             <div class="text-xs text-zinc-400">{{ $d->format('M j') }}</div>
                         </td>
                         @foreach (\App\Livewire\Availability::SLOTS as $slot)
-                            @php $attending = ! in_array($dateStr . '|' . $slot, $this->unavailableKeys); @endphp
+                            @php $attending = ! in_array($dateStr . '|' . $slot, $this->notAttendingKeys); @endphp
                             <td class="p-3 text-center">
                                 <label class="inline-flex items-center justify-center cursor-pointer">
                                     <flux:checkbox

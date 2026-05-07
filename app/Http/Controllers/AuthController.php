@@ -48,7 +48,7 @@ class AuthController extends Controller
 
         $request->session()->put('pending_invite_code', $code);
 
-        return back()->with('status', 'You\'ll join ' . $household->name . ' after signing in.');
+        return back()->with('status', 'You\'ll join '.$household->name.' after signing in.');
     }
 
     public function joinViaLink(Request $request, string $code): RedirectResponse
@@ -64,20 +64,22 @@ class AuthController extends Controller
 
         if ($user = $request->user()) {
             $user->joinHousehold($household);
-            return redirect('/')->with('status', 'You joined ' . $household->name . '.');
+
+            return redirect('/')->with('status', 'You joined '.$household->name.'.');
         }
 
         $request->session()->put('pending_invite_code', $code);
 
         return redirect()->route('login')->with(
             'status',
-            'You\'ll join ' . $household->name . ' after signing in.'
+            'You\'ll join '.$household->name.' after signing in.'
         );
     }
 
     public function clearInvite(Request $request): RedirectResponse
     {
         $request->session()->forget('pending_invite_code');
+
         return back();
     }
 
@@ -101,13 +103,20 @@ class AuthController extends Controller
         $appleUser = Socialite::driver('apple')->stateless()->user();
 
         $user = User::firstOrNew(['apple_sub' => $appleUser->getId()]);
-        $user->email = $appleUser->getEmail() ?: $user->email ?: ($appleUser->getId() . '@apple.private');
+        if (! $user->exists && $appleUser->getEmail()) {
+            $existing = User::where('email', $appleUser->getEmail())->first();
+            if ($existing) {
+                $user = $existing;
+                $user->apple_sub = $appleUser->getId();
+            }
+        }
+        $user->email = $appleUser->getEmail() ?: $user->email ?: ($appleUser->getId().'@apple.private');
         $user->name = $appleUser->getName() ?: $user->name ?: 'You';
         $user->avatar = $appleUser->getAvatar() ?: $user->avatar;
 
         $newHousehold = null;
         if (! $user->household_id && ! $invitedHousehold) {
-            $householdName = $appleUser->getName() ? $user->name . "'s Household" : 'Your Household';
+            $householdName = $appleUser->getName() ? $user->name."'s Household" : 'Your Household';
             $newHousehold = Household::create(['name' => $householdName]);
         }
 
@@ -142,7 +151,7 @@ class AuthController extends Controller
 
         $email = strtolower(trim($data['email']));
 
-        $key = 'magic-link:' . sha1($email . '|' . $request->ip());
+        $key = 'magic-link:'.sha1($email.'|'.$request->ip());
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->withErrors([
                 'email' => 'Too many attempts. Please wait a minute and try again.',
@@ -163,7 +172,7 @@ class AuthController extends Controller
             'expires_at' => now()->addMinutes($minutes),
         ]);
 
-        $url = url('/auth/magic/' . $token);
+        $url = url('/auth/magic/'.$token);
 
         Mail::to($email)->send(new MagicLoginLink($url, $code, $minutes));
 
@@ -186,7 +195,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $key = 'magic-code:' . sha1($email . '|' . $request->ip());
+        $key = 'magic-code:'.sha1($email.'|'.$request->ip());
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->withErrors([
                 'code' => 'Too many attempts. Request a new code.',
@@ -243,7 +252,7 @@ class AuthController extends Controller
 
         $newHousehold = null;
         if (! $user->household_id && ! $invitedHousehold) {
-            $householdName = $user->name ? $user->name . "'s Household" : 'Your Household';
+            $householdName = $user->name ? $user->name."'s Household" : 'Your Household';
             $newHousehold = Household::create(['name' => $householdName]);
         }
 
@@ -276,6 +285,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/login');
     }
 
@@ -286,7 +296,7 @@ class AuthController extends Controller
 
         $user->forceFill(['household_id' => $household->id])->save();
 
-        return back()->with('status', 'Switched to ' . $household->name . '.');
+        return back()->with('status', 'Switched to '.$household->name.'.');
     }
 
     public function devLogin(Request $request, User $user): RedirectResponse

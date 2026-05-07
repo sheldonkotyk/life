@@ -63,6 +63,7 @@
                     name="{{ auth()->user()->name }}"
                     initials="{{ strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}"
                     avatar="{{ auth()->user()->avatar }}"
+                    circle
                 />
                 @php
                     $currentUser = auth()->user();

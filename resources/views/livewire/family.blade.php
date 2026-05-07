@@ -12,7 +12,7 @@
         <flux:heading size="lg">{{ $editingId ? 'Edit member' : 'Add family member' }}</flux:heading>
 
         <form wire:submit="save" class="grid grid-cols-1 sm:grid-cols-6 gap-4 mt-4 items-end">
-            <div class="sm:col-span-2">
+            <div class="sm:col-span-4">
                 <flux:field>
                     <flux:label>Name</flux:label>
                     <flux:input wire:model="name" placeholder="e.g. Alex" />
@@ -20,27 +20,16 @@
                 </flux:field>
             </div>
 
-            <flux:field>
-                <flux:label>Color</flux:label>
-                <flux:input type="color" wire:model="color" class:input="h-10!" />
-            </flux:field>
-
-            <flux:field>
-                <flux:label>Birthday</flux:label>
-                <flux:input type="date" wire:model="birthday" />
-            </flux:field>
-
-            <div class="flex items-center gap-2 pt-6">
-                <flux:checkbox wire:model="isChild" id="isChild" label="Child" />
+            <div class="sm:col-span-2">
+                <flux:field>
+                    <flux:label>Color</flux:label>
+                    <flux:input type="color" wire:model="color" class:input="h-10!" />
+                </flux:field>
             </div>
 
-            <div class="flex gap-2">
-                <flux:button type="submit" variant="primary">
-                    {{ $editingId ? 'Update' : 'Add' }}
-                </flux:button>
-                <flux:modal.close>
-                    <flux:button type="button" variant="ghost">Cancel</flux:button>
-                </flux:modal.close>
+            <div class="sm:col-span-6 flex items-center gap-4 pt-6">
+                <flux:checkbox wire:model="isChild" id="isChild" label="Child" />
+                <flux:checkbox wire:model="isGuest" id="isGuest" label="Guest" />
             </div>
 
             <div class="sm:col-span-6">
@@ -49,6 +38,32 @@
                     <flux:input wire:model="notes" placeholder="e.g. picky eater, vegetarian on Fridays" />
                 </flux:field>
             </div>
+
+            @if ($editingId)
+                <div class="sm:col-span-6">
+                    <flux:subheading>Allergies</flux:subheading>
+                    <div class="flex flex-wrap items-center gap-2 mt-2">
+                        @foreach ($this->editingAllergies as $allergy)
+                            <flux:badge color="red">
+                                {{ $allergy->food }}
+                                <flux:badge.close wire:click="removePreference({{ $allergy->id }})" />
+                            </flux:badge>
+                        @endforeach
+                        @if ($this->editingAllergies->isEmpty())
+                            <flux:text size="sm" variant="subtle">No allergies added.</flux:text>
+                        @endif
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                        <flux:input
+                            wire:model="newAllergy"
+                            wire:keydown.enter.prevent="addAllergy"
+                            placeholder="e.g. peanuts"
+                            size="sm"
+                        />
+                        <flux:button type="button" size="sm" variant="ghost" wire:click="addAllergy">Add</flux:button>
+                    </div>
+                </div>
+            @endif
 
             <div class="sm:col-span-6">
                 <flux:subheading>Daily macro targets <span class="text-zinc-400 font-normal">(optional)</span></flux:subheading>
@@ -71,6 +86,15 @@
                     </flux:field>
                 </div>
             </div>
+
+            <div class="sm:col-span-6 flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="ghost">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary">
+                    {{ $editingId ? 'Update' : 'Add' }}
+                </flux:button>
+            </div>
         </form>
     </flux:modal>
 
@@ -82,7 +106,12 @@
                     <div class="flex items-center gap-3">
                         <x-avatar :member="$m" size="lg" />
                         <div>
-                            <flux:heading size="lg">{{ $m->name }}</flux:heading>
+                            <div class="flex items-center gap-2">
+                                <flux:heading size="lg">{{ $m->name }}</flux:heading>
+                                @if ($m->is_guest)
+                                    <flux:badge size="sm" color="amber">Guest</flux:badge>
+                                @endif
+                            </div>
                             <flux:text size="sm" variant="subtle">
                                 {{ $m->is_child ? 'Child' : 'Adult' }}
                                 @if ($m->user) · has account @endif

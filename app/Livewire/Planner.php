@@ -62,7 +62,7 @@ class Planner extends Component
         $this->editingPlanId = $planId;
 
         $hh = auth()->user()->household_id;
-        $allMemberIds = FamilyMember::where('household_id', $hh)->pluck('id')->all();
+        $allMemberIds = FamilyMember::where('household_id', $hh)->where('is_guest', false)->pluck('id')->all();
 
         if ($planId) {
             $plan = MealPlan::with('attendees', 'skippedIngredients')->where('household_id', $hh)->findOrFail($planId);
@@ -181,8 +181,10 @@ class Planner extends Component
         foreach ($days as $d) {
             foreach (['breakfast', 'lunch', 'dinner'] as $slot) {
                 $key = $d->toDateString().'|'.$slot;
-                $unavailableIds = $unavailabilities->get($key, []);
-                $defaultAttendees[$key] = $members->whereNotIn('id', $unavailableIds)->values();
+                $rowIds = $unavailabilities->get($key, []);
+                $defaultAttendees[$key] = $members
+                    ->filter(fn ($m) => $m->is_guest ? in_array($m->id, $rowIds) : ! in_array($m->id, $rowIds))
+                    ->values();
             }
         }
 
