@@ -62,6 +62,23 @@
     </flux:card>
 
     <flux:card>
+        <flux:heading size="lg">Join another household</flux:heading>
+        <flux:text size="sm" variant="subtle" class="mb-3">
+            Enter an invite code to switch to a different household.
+        </flux:text>
+
+        <form wire:submit="joinHousehold" class="flex items-start gap-2">
+            <flux:input
+                wire:model="joinCode"
+                placeholder="INVITE CODE"
+                class="font-mono uppercase"
+                maxlength="12"
+            />
+            <flux:button type="submit" variant="primary">Join</flux:button>
+        </form>
+    </flux:card>
+
+    <flux:card>
         <flux:heading size="lg" class="mb-3">Members</flux:heading>
         <ul class="divide-y divide-zinc-200 dark:divide-zinc-700">
             @foreach ($members as $member)
