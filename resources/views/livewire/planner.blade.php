@@ -270,6 +270,12 @@
                     </div>
                 </flux:callout>
 
+                <div class="grid grid-cols-2 gap-2">
+                    <flux:input type="time" wire:model="startTime" label="Start time (override)" placeholder="default" />
+                    <flux:input type="time" wire:model="endTime" label="End time (override)" placeholder="default" />
+                </div>
+                @error('endTime') <flux:text size="sm" class="text-red-600">{{ $message }}</flux:text> @enderror
+
                 <flux:field>
                     <flux:label>Notes</flux:label>
                     <flux:textarea wire:model="notes" rows="2" />

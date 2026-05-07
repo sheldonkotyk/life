@@ -77,6 +77,23 @@ class MealPlan extends Model
         return array_map(fn ($v) => round($v / $servings, 1), $sum);
     }
 
+    public function effectiveStartTime(): ?string
+    {
+        return $this->resolveTime('start_time', '_start_time');
+    }
+
+    public function effectiveEndTime(): ?string
+    {
+        return $this->resolveTime('end_time', '_end_time');
+    }
+
+    private function resolveTime(string $own, string $suffix): ?string
+    {
+        $value = $this->{$own} ?? optional($this->household)->{$this->slot.$suffix};
+
+        return $value ? substr($value, 0, 5) : null;
+    }
+
     public function displayName(): string
     {
         if ($this->custom_name) {

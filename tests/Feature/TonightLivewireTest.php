@@ -28,7 +28,7 @@ it('renders tonight dashboard with no plan', function () {
     loginUser();
 
     Livewire::test(Tonight::class)
-        ->assertSee('No dinner planned');
+        ->assertSee('Nothing planned today');
 });
 
 it('shows tonight dinner with confirmed count', function () {

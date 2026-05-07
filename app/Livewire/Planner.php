@@ -40,6 +40,10 @@ class Planner extends Component
 
     public string $newRecipeName = '';
 
+    public ?string $startTime = null;
+
+    public ?string $endTime = null;
+
     public function mount(): void
     {
         $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->toDateString();
@@ -89,6 +93,8 @@ class Planner extends Component
             $this->leftoverServings = $plan->leftover_servings;
             $this->attendees = $plan->attendees->pluck('id')->all();
             $this->skippedIngredientIds = $plan->skippedIngredients->pluck('id')->all();
+            $this->startTime = $plan->start_time ? substr($plan->start_time, 0, 5) : null;
+            $this->endTime = $plan->end_time ? substr($plan->end_time, 0, 5) : null;
         } else {
             $this->selectedRecipeId = null;
             $this->selectedLeftoverId = null;
@@ -101,12 +107,14 @@ class Planner extends Component
                 ->pluck('family_member_id')->all();
             $this->attendees = array_values(array_diff($allMemberIds, $unavailableIds));
             $this->skippedIngredientIds = [];
+            $this->startTime = null;
+            $this->endTime = null;
         }
     }
 
     public function cancelEdit(): void
     {
-        $this->reset(['editingPlanId', 'editingDate', 'editingSlot', 'selectedRecipeId', 'selectedLeftoverId', 'customName', 'notes', 'saveLeftovers', 'leftoverServings', 'attendees', 'skippedIngredientIds', 'newRecipeName']);
+        $this->reset(['editingPlanId', 'editingDate', 'editingSlot', 'selectedRecipeId', 'selectedLeftoverId', 'customName', 'notes', 'saveLeftovers', 'leftoverServings', 'attendees', 'skippedIngredientIds', 'newRecipeName', 'startTime', 'endTime']);
         $this->modal('edit-meal')->close();
     }
 
@@ -132,6 +140,11 @@ class Planner extends Component
     {
         $hh = auth()->user()->household_id;
 
+        $this->validate([
+            'startTime' => ['nullable', 'date_format:H:i'],
+            'endTime' => ['nullable', 'date_format:H:i', 'after:startTime'],
+        ]);
+
         $data = [
             'household_id' => $hh,
             'date' => $this->editingDate,
@@ -142,6 +155,8 @@ class Planner extends Component
             'notes' => $this->notes ?: null,
             'save_leftovers' => $this->saveLeftovers,
             'leftover_servings' => $this->saveLeftovers ? $this->leftoverServings : null,
+            'start_time' => $this->startTime ?: null,
+            'end_time' => $this->endTime ?: null,
         ];
 
         if ($this->editingPlanId) {

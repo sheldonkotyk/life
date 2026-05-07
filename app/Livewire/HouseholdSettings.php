@@ -31,6 +31,18 @@ class HouseholdSettings extends Component
 
     public ?int $attendanceMemberId = null;
 
+    public string $breakfastStart = '07:00';
+
+    public string $breakfastEnd = '09:00';
+
+    public string $lunchStart = '11:30';
+
+    public string $lunchEnd = '13:30';
+
+    public string $dinnerStart = '17:30';
+
+    public string $dinnerEnd = '19:30';
+
     public function mount(): void
     {
         $household = auth()->user()->household;
@@ -40,8 +52,24 @@ class HouseholdSettings extends Component
         $this->householdId = $household->id;
         $this->name = $household->name;
         $this->inviteCode = $household->invite_code;
+        $this->loadMealTimes($household);
 
         $this->attendanceMemberId = $this->defaultAttendanceMemberId();
+    }
+
+    private function loadMealTimes(Household $household): void
+    {
+        $this->breakfastStart = self::formatTime($household->breakfast_start_time);
+        $this->breakfastEnd = self::formatTime($household->breakfast_end_time);
+        $this->lunchStart = self::formatTime($household->lunch_start_time);
+        $this->lunchEnd = self::formatTime($household->lunch_end_time);
+        $this->dinnerStart = self::formatTime($household->dinner_start_time);
+        $this->dinnerEnd = self::formatTime($household->dinner_end_time);
+    }
+
+    public static function formatTime(?string $value): string
+    {
+        return $value ? substr($value, 0, 5) : '';
     }
 
     private function defaultAttendanceMemberId(): ?int
@@ -130,6 +158,33 @@ class HouseholdSettings extends Component
 
         $this->household()->update($data);
         session()->flash('status', 'Household updated.');
+    }
+
+    public function saveMealTimes(): void
+    {
+        $this->authorizeManage();
+
+        $rules = ['date_format:H:i'];
+        $this->validate([
+            'breakfastStart' => $rules,
+            'breakfastEnd' => [...$rules, 'after:breakfastStart'],
+            'lunchStart' => $rules,
+            'lunchEnd' => [...$rules, 'after:lunchStart'],
+            'dinnerStart' => $rules,
+            'dinnerEnd' => [...$rules, 'after:dinnerStart'],
+        ]);
+
+        $this->household()->update([
+            'breakfast_start_time' => $this->breakfastStart,
+            'breakfast_end_time' => $this->breakfastEnd,
+            'lunch_start_time' => $this->lunchStart,
+            'lunch_end_time' => $this->lunchEnd,
+            'dinner_start_time' => $this->dinnerStart,
+            'dinner_end_time' => $this->dinnerEnd,
+        ]);
+
+        $this->loadMealTimes($this->household()->fresh());
+        session()->flash('status', 'Default meal times updated.');
     }
 
     public function regenerateInviteCode(): void
