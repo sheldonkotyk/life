@@ -43,6 +43,17 @@ class Planner extends Component
     public function mount(): void
     {
         $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->toDateString();
+
+        $openDate = request()->query('date');
+        $openSlot = request()->query('slot');
+        if ($openDate && in_array($openSlot, ['breakfast', 'lunch', 'dinner', 'snack'], true)) {
+            $hh = auth()->user()->household_id;
+            $existing = MealPlan::where('household_id', $hh)
+                ->whereDate('date', $openDate)
+                ->where('slot', $openSlot)
+                ->first();
+            $this->openSlot($openDate, $openSlot, $existing?->id);
+        }
     }
 
     public function shiftWeek(int $weeks): void
@@ -62,6 +73,8 @@ class Planner extends Component
         $this->editingDate = $date;
         $this->editingSlot = $slot;
         $this->editingPlanId = $planId;
+
+        $this->modal('edit-meal')->show();
 
         $hh = auth()->user()->household_id;
         $allMemberIds = FamilyMember::where('household_id', $hh)->where('is_guest', false)->pluck('id')->all();
@@ -94,6 +107,7 @@ class Planner extends Component
     public function cancelEdit(): void
     {
         $this->reset(['editingPlanId', 'editingDate', 'editingSlot', 'selectedRecipeId', 'selectedLeftoverId', 'customName', 'notes', 'saveLeftovers', 'leftoverServings', 'attendees', 'skippedIngredientIds', 'newRecipeName']);
+        $this->modal('edit-meal')->close();
     }
 
     public function createRecipeFromName(): void
@@ -188,7 +202,7 @@ class Planner extends Component
             ->get()
             ->groupBy(fn ($p) => $p->date->toDateString().'|'.$p->slot);
 
-        $members = FamilyMember::where('household_id', $hh)->with('user')->orderBy('name')->get();
+        $members = FamilyMember::where('household_id', $hh)->with('user')->orderBy('is_guest')->orderBy('name')->get();
         $recipes = Recipe::where('household_id', $hh)->orderBy('name')->get();
 
         $unavailabilities = FamilyMemberUnavailability::whereIn('family_member_id', $members->pluck('id'))

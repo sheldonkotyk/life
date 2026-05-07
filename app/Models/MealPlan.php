@@ -38,7 +38,12 @@ class MealPlan extends Model
 
     public function attendees(): BelongsToMany
     {
-        return $this->belongsToMany(FamilyMember::class, 'meal_attendances')->withTimestamps();
+        return $this->belongsToMany(FamilyMember::class, 'meal_attendances')->withPivot('status')->withTimestamps();
+    }
+
+    public function confirmedAttendees()
+    {
+        return $this->attendees->where('pivot.status', '!=', 'not_eating');
     }
 
     public function skippedIngredients(): BelongsToMany
@@ -60,11 +65,16 @@ class MealPlan extends Model
         $skipped = $this->skippedIngredients->pluck('id')->all();
         $sum = ['calories' => 0.0, 'protein_g' => 0.0, 'carbs_g' => 0.0, 'fat_g' => 0.0];
         foreach ($recipe->ingredients as $ing) {
-            if (in_array($ing->id, $skipped, true)) continue;
-            foreach ($sum as $k => $_) $sum[$k] += (float) ($ing->{$k} ?? 0);
+            if (in_array($ing->id, $skipped, true)) {
+                continue;
+            }
+            foreach ($sum as $k => $_) {
+                $sum[$k] += (float) ($ing->{$k} ?? 0);
+            }
         }
         $servings = max(1, (int) $recipe->servings);
-        return array_map(fn($v) => round($v / $servings, 1), $sum);
+
+        return array_map(fn ($v) => round($v / $servings, 1), $sum);
     }
 
     public function displayName(): string
@@ -74,8 +84,10 @@ class MealPlan extends Model
         }
         if ($this->leftoverOf) {
             $base = $this->leftoverOf->recipe?->name ?? $this->leftoverOf->custom_name ?? 'meal';
+
             return "Leftovers — {$base}";
         }
+
         return $this->recipe?->name ?? '(unplanned)';
     }
 }

@@ -2,7 +2,9 @@
 
 namespace App\Livewire;
 
+use App\Models\FamilyMember;
 use App\Models\Household;
+use App\Models\User;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -11,12 +13,23 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class HouseholdSettings extends Component
 {
+    public const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+    public const SLOTS = ['breakfast', 'lunch', 'dinner'];
+
     public ?int $householdId = null;
+
     public string $name = '';
+
     public string $inviteCode = '';
+
     public string $joinCode = '';
+
     public bool $choosingSuccessor = false;
+
     public ?int $successorId = null;
+
+    public ?int $attendanceMemberId = null;
 
     public function mount(): void
     {
@@ -27,6 +40,78 @@ class HouseholdSettings extends Component
         $this->householdId = $household->id;
         $this->name = $household->name;
         $this->inviteCode = $household->invite_code;
+
+        $this->attendanceMemberId = $this->defaultAttendanceMemberId();
+    }
+
+    private function defaultAttendanceMemberId(): ?int
+    {
+        $available = $this->availableAttendanceMembers();
+
+        $own = $available->firstWhere('user_id', auth()->id());
+
+        return $own?->id ?? $available->first()?->id;
+    }
+
+    private function availableAttendanceMembers()
+    {
+        $query = $this->household()->members()->orderBy('is_guest')->orderBy('name');
+
+        if ($this->canManage()) {
+            return $query->get();
+        }
+
+        return $query->where('user_id', auth()->id())->get();
+    }
+
+    public function selectedAttendanceMember(): ?FamilyMember
+    {
+        if (! $this->attendanceMemberId) {
+            return null;
+        }
+
+        return $this->availableAttendanceMembers()
+            ->firstWhere('id', $this->attendanceMemberId);
+    }
+
+    public function toggleAttendance(string $day, string $slot): void
+    {
+        if (! in_array($day, self::DAYS, true) || ! in_array($slot, self::SLOTS, true)) {
+            return;
+        }
+
+        $member = $this->selectedAttendanceMember();
+        abort_unless($member, 404);
+
+        $member->setDefaultAttendance($day, $slot, ! $member->attendsByDefault($day, $slot));
+    }
+
+    public function setDayAttendance(string $day, bool $value): void
+    {
+        if (! in_array($day, self::DAYS, true)) {
+            return;
+        }
+
+        $member = $this->selectedAttendanceMember();
+        abort_unless($member, 404);
+
+        foreach (self::SLOTS as $slot) {
+            $member->setDefaultAttendance($day, $slot, $value);
+        }
+    }
+
+    public function setSlotAttendance(string $slot, bool $value): void
+    {
+        if (! in_array($slot, self::SLOTS, true)) {
+            return;
+        }
+
+        $member = $this->selectedAttendanceMember();
+        abort_unless($member, 404);
+
+        foreach (self::DAYS as $day) {
+            $member->setDefaultAttendance($day, $slot, $value);
+        }
     }
 
     #[Computed]
@@ -68,6 +153,7 @@ class HouseholdSettings extends Component
 
         if (! $household) {
             $this->addError('joinCode', 'No household found for that code.');
+
             return;
         }
 
@@ -76,6 +162,7 @@ class HouseholdSettings extends Component
         if ($user->households()->where('households.id', $household->id)->exists()
             && $user->household_id === $household->id) {
             $this->addError('joinCode', 'You are already in that household.');
+
             return;
         }
 
@@ -86,7 +173,7 @@ class HouseholdSettings extends Component
         $this->name = $household->name;
         $this->inviteCode = $household->invite_code;
 
-        session()->flash('status', 'You joined ' . $household->name . '.');
+        session()->flash('status', 'You joined '.$household->name.'.');
         $this->redirectRoute('household', navigate: true);
     }
 
@@ -110,6 +197,7 @@ class HouseholdSettings extends Component
 
         if ($household->admins()->count() <= 1 && $household->admins()->where('users.id', $userId)->exists()) {
             session()->flash('status', 'A household must have at least one administrator.');
+
             return;
         }
 
@@ -135,6 +223,7 @@ class HouseholdSettings extends Component
                 $household->users()->updateExistingPivot($otherMembers->first()->id, ['role' => 'admin']);
             } else {
                 $this->choosingSuccessor = true;
+
                 return;
             }
         }
@@ -167,12 +256,12 @@ class HouseholdSettings extends Component
         $this->successorId = null;
     }
 
-    private function finalizeLeave(\App\Models\User $user, Household $household): void
+    private function finalizeLeave(User $user, Household $household): void
     {
         $household->users()->detach($user->id);
         $this->moveToFallbackHousehold($user);
 
-        session()->flash('status', 'You left ' . $household->name . '.');
+        session()->flash('status', 'You left '.$household->name.'.');
         $this->redirectRoute('household', navigate: true);
     }
 
@@ -191,17 +280,18 @@ class HouseholdSettings extends Component
 
         $this->moveToFallbackHousehold($user);
 
-        session()->flash('status', 'Deleted ' . $name . '.');
+        session()->flash('status', 'Deleted '.$name.'.');
         $this->redirectRoute('household', navigate: true);
     }
 
-    private function moveToFallbackHousehold(\App\Models\User $user): void
+    private function moveToFallbackHousehold(User $user): void
     {
         $next = $user->households()->orderBy('households.id')->first();
 
         if (! $next) {
-            $next = Household::create(['name' => ($user->name ?: 'Your') . "'s Household"]);
+            $next = Household::create(['name' => ($user->name ?: 'Your')."'s Household"]);
             $user->joinHousehold($next);
+
             return;
         }
 
@@ -225,6 +315,8 @@ class HouseholdSettings extends Component
     {
         return view('livewire.household-settings', [
             'members' => $this->household()->users()->orderBy('name')->get(),
+            'attendanceMembers' => $this->availableAttendanceMembers(),
+            'attendanceMember' => $this->selectedAttendanceMember(),
         ]);
     }
 }

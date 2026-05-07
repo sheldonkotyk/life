@@ -148,19 +148,15 @@
     </flux:card>
     </div>
 
-    {{-- Edit panel --}}
-    @if ($editingDate)
-        <div class="fixed inset-0 bg-zinc-900/40 z-40" wire:click="cancelEdit"></div>
-        <div class="fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[480px] bg-white dark:bg-zinc-900 shadow-2xl z-50 flex flex-col">
-            <div class="p-4 border-b border-zinc-200 dark:border-zinc-700 flex justify-between items-center">
+    {{-- Edit modal --}}
+    <flux:modal name="edit-meal" @close="cancelEdit" class="md:max-w-3xl md:w-[48rem]">
+        @if ($editingDate)
+            <div class="space-y-4">
                 <div>
-                    <flux:heading class="capitalize">{{ $editingSlot }}</flux:heading>
+                    <flux:heading size="lg" class="capitalize">{{ $editingSlot }}</flux:heading>
                     <flux:text size="sm" variant="subtle">{{ \Carbon\Carbon::parse($editingDate)->format('l, M j') }}</flux:text>
                 </div>
-                <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="cancelEdit" />
-            </div>
 
-            <div class="flex-1 overflow-y-auto p-4 space-y-4">
                 @if ($availableLeftovers->isNotEmpty() && ! $editingPlanId)
                     <div>
                         <flux:text size="xs" variant="subtle" class="uppercase tracking-wide mb-2 block">Use leftovers</flux:text>
@@ -243,8 +239,16 @@
 
                 <div>
                     <flux:text size="xs" variant="subtle" class="uppercase tracking-wide mb-2 block">Who's eating?</flux:text>
+                    @php $hasGuests = $members->contains('is_guest', true); $guestDividerShown = false; @endphp
                     <div class="grid grid-cols-1 gap-1">
                         @foreach ($members as $m)
+                            @if ($m->is_guest && ! $guestDividerShown)
+                                @php $guestDividerShown = true; @endphp
+                                <div class="flex items-center gap-2 mt-2 mb-1">
+                                    <flux:text size="xs" variant="subtle" class="uppercase tracking-wide">Guests</flux:text>
+                                    <flux:separator class="flex-1" />
+                                </div>
+                            @endif
                             <label class="flex items-center gap-2 p-2 rounded hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">
                                 <flux:checkbox wire:model="attendees" value="{{ $m->id }}" />
                                 <x-avatar :member="$m" size="sm" />
@@ -270,19 +274,19 @@
                     <flux:label>Notes</flux:label>
                     <flux:textarea wire:model="notes" rows="2" />
                 </flux:field>
-            </div>
 
-            <div class="p-4 border-t border-zinc-200 dark:border-zinc-700 flex justify-between gap-2">
-                <div>
-                    @if ($editingPlanId)
-                        <flux:button variant="danger" wire:click="clearPlan" wire:confirm="Remove this meal?">Remove</flux:button>
-                    @endif
-                </div>
-                <div class="flex gap-2">
-                    <flux:button variant="ghost" wire:click="cancelEdit">Cancel</flux:button>
-                    <flux:button variant="primary" wire:click="savePlan">Save</flux:button>
+                <div class="flex justify-between gap-2 pt-2">
+                    <div>
+                        @if ($editingPlanId)
+                            <flux:button variant="danger" wire:click="clearPlan" wire:confirm="Remove this meal?">Remove</flux:button>
+                        @endif
+                    </div>
+                    <div class="flex gap-2">
+                        <flux:button variant="ghost" wire:click="cancelEdit">Cancel</flux:button>
+                        <flux:button variant="primary" wire:click="savePlan">Save</flux:button>
+                    </div>
                 </div>
             </div>
-        </div>
-    @endif
+        @endif
+    </flux:modal>
 </div>

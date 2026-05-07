@@ -14,6 +14,7 @@ class FamilyMember extends Model
     protected $casts = [
         'is_child' => 'bool',
         'is_guest' => 'bool',
+        'default_attendance' => 'array',
         'target_calories' => 'float',
         'target_protein_g' => 'float',
         'target_carbs_g' => 'float',
@@ -57,7 +58,7 @@ class FamilyMember extends Model
 
     public function meals(): BelongsToMany
     {
-        return $this->belongsToMany(MealPlan::class, 'meal_attendances')->withTimestamps();
+        return $this->belongsToMany(MealPlan::class, 'meal_attendances')->withPivot('status')->withTimestamps();
     }
 
     public function unavailabilities(): HasMany
@@ -68,5 +69,18 @@ class FamilyMember extends Model
     public function scopeVisible($query)
     {
         return $query->where(fn ($q) => $q->where('is_guest', false)->orWhereHas('meals'));
+    }
+
+    public function attendsByDefault(string $day, string $slot): bool
+    {
+        return (bool) ($this->default_attendance[$day][$slot] ?? ! $this->is_guest);
+    }
+
+    public function setDefaultAttendance(string $day, string $slot, bool $value): void
+    {
+        $current = $this->default_attendance ?? [];
+        $current[$day][$slot] = $value;
+        $this->default_attendance = $current;
+        $this->save();
     }
 }
