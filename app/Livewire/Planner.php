@@ -175,7 +175,7 @@ class Planner extends Component
             ->whereIn('id', $this->attendees)
             ->whereNotIn('id', $skippingIds)
             ->pluck('id')->all();
-        $syncData = array_fill_keys($attendingIds, ['status' => null])
+        $syncData = array_fill_keys($attendingIds, ['status' => 'eating'])
             + array_fill_keys($skippingIds, ['status' => 'not_eating']);
         $plan->attendees()->sync($syncData);
 
