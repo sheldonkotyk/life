@@ -45,11 +45,27 @@
                                     </div>
                                 </button>
                             @endforeach
-                            <button
-                                wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                class="w-full text-sm text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1.5 rounded">
-                                + add
-                            </button>
+                            @if ($cellPlans->isEmpty())
+                                <button
+                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
+                                    class="w-full text-left text-sm text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1.5 px-2 rounded">
+                                    <div>+ add</div>
+                                    @php $defaults = $defaultAttendees[$key] ?? collect(); @endphp
+                                    @if ($defaults->isNotEmpty())
+                                        <div class="flex flex-wrap gap-0.5 mt-1">
+                                            @foreach ($defaults as $a)
+                                                <x-avatar :member="$a" size="xs" />
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </button>
+                            @else
+                                <button
+                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
+                                    class="w-full text-sm text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1.5 rounded">
+                                    + add
+                                </button>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -102,11 +118,27 @@
                                         </div>
                                     </button>
                                 @endforeach
-                                <button
-                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                    class="w-full text-xs text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1 rounded">
-                                    + add
-                                </button>
+                                @if ($cellPlans->isEmpty())
+                                    <button
+                                        wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
+                                        class="w-full text-left text-xs text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1 px-2 rounded">
+                                        <div>+ add</div>
+                                        @php $defaults = $defaultAttendees[$key] ?? collect(); @endphp
+                                        @if ($defaults->isNotEmpty())
+                                            <div class="flex flex-wrap gap-0.5 mt-1">
+                                                @foreach ($defaults as $a)
+                                                    <x-avatar :member="$a" size="xs" />
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </button>
+                                @else
+                                    <button
+                                        wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
+                                        class="w-full text-xs text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 py-1 rounded">
+                                        + add
+                                    </button>
+                                @endif
                             </td>
                         @endforeach
                     </tr>

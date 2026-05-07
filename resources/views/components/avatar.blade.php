@@ -12,10 +12,20 @@
     ];
     $classes = $sizes[$size] ?? $sizes['md'];
     $initial = strtoupper(mb_substr($member->name, 0, 1));
+    $avatarUrl = $member->user?->avatar;
 @endphp
 
-<span
-    {{ $attributes->merge(['class' => "$classes rounded-full inline-flex items-center justify-center text-white font-semibold ring-1 ring-white shadow-sm shrink-0"]) }}
-    style="background-color: {{ $member->color }}"
-    title="{{ $member->name }}"
->{{ $initial }}</span>
+@if ($avatarUrl)
+    <img
+        src="{{ $avatarUrl }}"
+        alt="{{ $member->name }}"
+        title="{{ $member->name }}"
+        {{ $attributes->merge(['class' => "$classes rounded-full object-cover ring-1 ring-white shadow-sm shrink-0"]) }}
+    />
+@else
+    <span
+        {{ $attributes->merge(['class' => "$classes rounded-full inline-flex items-center justify-center text-white font-semibold ring-1 ring-white shadow-sm shrink-0"]) }}
+        style="background-color: {{ $member->color }}"
+        title="{{ $member->name }}"
+    >{{ $initial }}</span>
+@endif

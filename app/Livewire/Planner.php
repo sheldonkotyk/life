@@ -6,8 +6,8 @@ use App\Models\FamilyMember;
 use App\Models\FamilyMemberUnavailability;
 use App\Models\MealPlan;
 use App\Models\Recipe;
+use App\Models\RecipeIngredient;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -17,16 +17,25 @@ class Planner extends Component
     public string $weekStart;
 
     public ?int $editingPlanId = null;
+
     public ?string $editingDate = null;
+
     public ?string $editingSlot = null;
 
     public ?int $selectedRecipeId = null;
+
     public ?int $selectedLeftoverId = null;
+
     public string $customName = '';
+
     public string $notes = '';
+
     public bool $saveLeftovers = false;
+
     public ?int $leftoverServings = null;
+
     public array $attendees = [];
+
     public array $skippedIngredientIds = [];
 
     public function mount(): void
@@ -114,7 +123,7 @@ class Planner extends Component
 
         $effectiveRecipeId = $plan->recipe_id ?? $plan->leftoverOf?->recipe_id;
         if ($effectiveRecipeId) {
-            $validIngredientIds = \App\Models\RecipeIngredient::where('recipe_id', $effectiveRecipeId)
+            $validIngredientIds = RecipeIngredient::where('recipe_id', $effectiveRecipeId)
                 ->whereIn('id', $this->skippedIngredientIds)->pluck('id');
             $plan->skippedIngredients()->sync($validIngredientIds);
         } else {
@@ -151,16 +160,31 @@ class Planner extends Component
         $start = CarbonImmutable::parse($this->weekStart);
         $end = $start->addDays(6);
 
-        $days = collect(range(0, 6))->map(fn($i) => $start->addDays($i));
+        $days = collect(range(0, 6))->map(fn ($i) => $start->addDays($i));
 
         $plans = MealPlan::where('household_id', $hh)
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->with('recipe.ingredients', 'attendees', 'leftoverOf.recipe.ingredients', 'skippedIngredients')
+            ->with('recipe.ingredients', 'attendees.user', 'leftoverOf.recipe.ingredients', 'skippedIngredients')
             ->get()
-            ->groupBy(fn($p) => $p->date->toDateString() . '|' . $p->slot);
+            ->groupBy(fn ($p) => $p->date->toDateString().'|'.$p->slot);
 
-        $members = FamilyMember::where('household_id', $hh)->orderBy('name')->get();
+        $members = FamilyMember::where('household_id', $hh)->with('user')->orderBy('name')->get();
         $recipes = Recipe::where('household_id', $hh)->orderBy('name')->get();
+
+        $unavailabilities = FamilyMemberUnavailability::whereIn('family_member_id', $members->pluck('id'))
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->get()
+            ->groupBy(fn ($u) => $u->date->toDateString().'|'.$u->slot)
+            ->map(fn ($group) => $group->pluck('family_member_id')->all());
+
+        $defaultAttendees = [];
+        foreach ($days as $d) {
+            foreach (['breakfast', 'lunch', 'dinner'] as $slot) {
+                $key = $d->toDateString().'|'.$slot;
+                $unavailableIds = $unavailabilities->get($key, []);
+                $defaultAttendees[$key] = $members->whereNotIn('id', $unavailableIds)->values();
+            }
+        }
 
         // Available leftovers: meals from past 3 days where save_leftovers=true and not yet consumed as leftover
         $consumedLeftoverIds = MealPlan::where('household_id', $hh)
@@ -193,6 +217,6 @@ class Planner extends Component
 
         $today = CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
 
-        return view('livewire.planner', compact('days', 'plans', 'members', 'recipes', 'availableLeftovers', 'start', 'activeIngredients', 'activeRecipeServings', 'today'));
+        return view('livewire.planner', compact('days', 'plans', 'members', 'recipes', 'availableLeftovers', 'start', 'activeIngredients', 'activeRecipeServings', 'today', 'defaultAttendees'));
     }
 }
