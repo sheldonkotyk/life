@@ -91,7 +91,9 @@ class Planner extends Component
             $this->notes = $plan->notes ?? '';
             $this->saveLeftovers = $plan->save_leftovers;
             $this->leftoverServings = $plan->leftover_servings;
-            $this->attendees = $plan->attendees->pluck('id')->all();
+            $this->attendees = $plan->attendees
+                ->where('pivot.status', '!=', 'not_eating')
+                ->pluck('id')->all();
             $this->skippedIngredientIds = $plan->skippedIngredients->pluck('id')->all();
             $this->startTime = $plan->start_time ? substr($plan->start_time, 0, 5) : null;
             $this->endTime = $plan->end_time ? substr($plan->end_time, 0, 5) : null;
@@ -166,9 +168,16 @@ class Planner extends Component
             $plan = MealPlan::create($data);
         }
 
-        $plan->attendees()->sync(
-            FamilyMember::where('household_id', $hh)->whereIn('id', $this->attendees)->pluck('id')
-        );
+        $skippingIds = $plan->attendees()
+            ->wherePivot('status', 'not_eating')
+            ->pluck('family_members.id')->all();
+        $attendingIds = FamilyMember::where('household_id', $hh)
+            ->whereIn('id', $this->attendees)
+            ->whereNotIn('id', $skippingIds)
+            ->pluck('id')->all();
+        $syncData = array_fill_keys($attendingIds, ['status' => null])
+            + array_fill_keys($skippingIds, ['status' => 'not_eating']);
+        $plan->attendees()->sync($syncData);
 
         $effectiveRecipeId = $plan->recipe_id ?? $plan->leftoverOf?->recipe_id;
         if ($effectiveRecipeId) {
