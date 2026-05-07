@@ -11,6 +11,10 @@ class Household extends Model
 {
     protected $guarded = [];
 
+    protected $casts = [
+        'dismissed_meal_names' => 'array',
+    ];
+
     protected static function booted(): void
     {
         static::creating(function (Household $h) {

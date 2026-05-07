@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\FamilyMember;
+use App\Models\Household;
+use App\Models\MealPlan;
 use App\Models\Recipe;
 use App\Models\RecipeIngredient;
 use App\Models\RecipeMemberRating;
@@ -13,20 +15,32 @@ use Livewire\Component;
 class Recipes extends Component
 {
     public bool $showForm = false;
+
     public ?int $editingId = null;
+
     public string $name = '';
+
     public string $description = '';
+
     public int $servings = 5;
+
     public ?int $prepMinutes = null;
+
     public string $sourceUrl = '';
+
     public string $instructions = '';
+
     public bool $makesLeftovers = false;
+
     public int $defaultLeftoverServings = 0;
 
     public array $ingredients = [];
+
     public array $ratings = [];
 
     public string $search = '';
+
+    public ?string $promotingCustomName = null;
 
     public function rules(): array
     {
@@ -61,6 +75,30 @@ class Recipes extends Component
         $this->showForm = true;
     }
 
+    public function dismissCustomName(string $customName): void
+    {
+        $household = Household::findOrFail(auth()->user()->household_id);
+        $dismissed = $household->dismissed_meal_names ?? [];
+        if (! in_array($customName, $dismissed, true)) {
+            $dismissed[] = $customName;
+            $household->update(['dismissed_meal_names' => $dismissed]);
+        }
+    }
+
+    public function restoreDismissed(): void
+    {
+        Household::where('id', auth()->user()->household_id)
+            ->update(['dismissed_meal_names' => null]);
+    }
+
+    public function createFromCustomName(string $customName): void
+    {
+        $this->resetForm();
+        $this->name = $customName;
+        $this->promotingCustomName = $customName;
+        $this->showForm = true;
+    }
+
     public function edit(int $id): void
     {
         $r = $this->householdRecipes()->with('ingredients', 'ratings')->findOrFail($id);
@@ -73,11 +111,13 @@ class Recipes extends Component
         $this->instructions = $r->instructions ?? '';
         $this->makesLeftovers = $r->makes_leftovers;
         $this->defaultLeftoverServings = $r->default_leftover_servings;
-        $this->ingredients = $r->ingredients->map(fn($i) => [
+        $this->ingredients = $r->ingredients->map(fn ($i) => [
             'name' => $i->name, 'quantity' => $i->quantity ?? '', 'unit' => $i->unit ?? '', 'category' => $i->category ?? '',
             'calories' => $i->calories ?? '', 'protein_g' => $i->protein_g ?? '', 'carbs_g' => $i->carbs_g ?? '', 'fat_g' => $i->fat_g ?? '',
         ])->toArray();
-        if (empty($this->ingredients)) $this->addIngredientRow();
+        if (empty($this->ingredients)) {
+            $this->addIngredientRow();
+        }
         $this->ratings = $r->ratings->pluck('rating', 'family_member_id')->toArray();
         $this->showForm = true;
     }
@@ -118,7 +158,9 @@ class Recipes extends Component
 
         $recipe->ingredients()->delete();
         foreach ($this->ingredients as $i => $ing) {
-            if (! trim($ing['name'] ?? '')) continue;
+            if (! trim($ing['name'] ?? '')) {
+                continue;
+            }
             RecipeIngredient::create([
                 'recipe_id' => $recipe->id,
                 'name' => $ing['name'],
@@ -135,12 +177,21 @@ class Recipes extends Component
 
         $recipe->ratings()->delete();
         foreach ($this->ratings as $memberId => $rating) {
-            if (! in_array($rating, ['love', 'ok', 'dislike'])) continue;
+            if (! in_array($rating, ['love', 'ok', 'dislike'])) {
+                continue;
+            }
             RecipeMemberRating::create([
                 'recipe_id' => $recipe->id,
                 'family_member_id' => $memberId,
                 'rating' => $rating,
             ]);
+        }
+
+        if ($this->promotingCustomName) {
+            MealPlan::where('household_id', auth()->user()->household_id)
+                ->whereNull('recipe_id')
+                ->where('custom_name', $this->promotingCustomName)
+                ->update(['recipe_id' => $recipe->id, 'custom_name' => null]);
         }
 
         $this->resetForm();
@@ -154,7 +205,7 @@ class Recipes extends Component
 
     public function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'description', 'prepMinutes', 'sourceUrl', 'instructions']);
+        $this->reset(['editingId', 'name', 'description', 'prepMinutes', 'sourceUrl', 'instructions', 'promotingCustomName']);
         $this->servings = 5;
         $this->makesLeftovers = false;
         $this->defaultLeftoverServings = 0;
@@ -170,7 +221,7 @@ class Recipes extends Component
     public function render()
     {
         $recipes = $this->householdRecipes()
-            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
             ->withCount('ingredients')
             ->with('ratings.familyMember', 'ingredients')
             ->orderBy('name')
@@ -178,6 +229,18 @@ class Recipes extends Component
 
         $members = FamilyMember::where('household_id', auth()->user()->household_id)->orderBy('name')->get();
 
-        return view('livewire.recipes', compact('recipes', 'members'));
+        $household = Household::find(auth()->user()->household_id);
+        $dismissed = $household?->dismissed_meal_names ?? [];
+
+        $customNames = MealPlan::where('household_id', auth()->user()->household_id)
+            ->whereNull('recipe_id')
+            ->whereNotNull('custom_name')
+            ->when($dismissed, fn ($q) => $q->whereNotIn('custom_name', $dismissed))
+            ->selectRaw('custom_name, COUNT(*) as uses, MAX(date) as last_used')
+            ->groupBy('custom_name')
+            ->orderByDesc('last_used')
+            ->get();
+
+        return view('livewire.recipes', compact('recipes', 'members', 'customNames', 'dismissed'));
     }
 }

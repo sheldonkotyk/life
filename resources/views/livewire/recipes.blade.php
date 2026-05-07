@@ -143,6 +143,37 @@
         </flux:card>
     @endif
 
+    @if (($customNames->isNotEmpty() || ! empty($dismissed)) && ! $showForm)
+        <flux:card>
+            <div class="flex items-baseline justify-between gap-2 mb-1">
+                <flux:heading size="sm">Quick meals to promote</flux:heading>
+                @if (! empty($dismissed))
+                    <flux:button size="xs" variant="ghost" wire:click="restoreDismissed">
+                        Restore {{ count($dismissed) }} hidden
+                    </flux:button>
+                @endif
+            </div>
+            <flux:text size="sm" variant="subtle" class="mb-3 block">These were entered as just a name in the planner. Turn them into proper recipes, or hide ones that aren't real meals.</flux:text>
+            <div class="flex flex-wrap gap-2">
+                @foreach ($customNames as $cn)
+                    <div class="inline-flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-md">
+                        <button wire:click="createFromCustomName(@js($cn->custom_name))"
+                                class="flex items-center gap-1 px-2 py-1 text-sm hover:text-indigo-600">
+                            <flux:icon.plus class="size-3" />
+                            {{ $cn->custom_name }}
+                            <span class="text-zinc-400 text-xs">×{{ $cn->uses }}</span>
+                        </button>
+                        <button wire:click="dismissCustomName(@js($cn->custom_name))"
+                                title="Hide — not a real meal"
+                                class="px-1.5 py-1 text-zinc-400 hover:text-red-600 border-l border-zinc-200 dark:border-zinc-700">
+                            <flux:icon.x-mark class="size-3" />
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+        </flux:card>
+    @endif
+
     {{-- List --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @forelse ($recipes as $r)
