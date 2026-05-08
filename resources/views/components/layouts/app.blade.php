@@ -18,31 +18,78 @@
 </head>
 <body class="h-full text-zinc-800 dark:text-zinc-200">
     @auth
-        @php $here = trim(request()->path(), '/'); @endphp
-        <flux:header sticky class="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-4 lg:px-8">
-            <flux:brand href="{{ url('/tonight') }}" name="Life" class="!me-6">
-                <x-slot name="logo">
-                    <span class="text-xl">✦</span>
-                </x-slot>
-            </flux:brand>
+        @php
+            $here = trim(request()->path(), '/');
+            $currentUser = auth()->user();
+            $userHouseholds = $currentUser->households()->orderBy('name')->get();
+            $navItems = [
+                'tonight' => ['label' => 'Tonight', 'icon' => 'moon'],
+                'plan' => ['label' => 'Plan', 'icon' => 'calendar-days'],
+                'availability' => ['label' => 'Attendance', 'icon' => 'user-group'],
+                'recipes' => ['label' => 'Recipes', 'icon' => 'book-open'],
+                'shopping' => ['label' => 'Shopping', 'icon' => 'shopping-cart'],
+                'tracker' => ['label' => 'Tracker', 'icon' => 'chart-bar'],
+            ];
+        @endphp
 
-            <flux:navbar class="-mb-px">
-                @foreach ([
-                    'tonight' => 'Tonight',
-                    'plan' => 'Plan',
-                    'availability' => 'Attendance',
-                    'family' => 'Family',
-                    'recipes' => 'Recipes',
-                    'shopping' => 'Shopping',
-                    'tracker' => 'Tracker',
-                ] as $path => $label)
-                    <flux:navbar.item href="{{ url('/' . $path) }}" :current="$here === $path">{{ $label }}</flux:navbar.item>
+        <flux:sidebar stashable sticky class="lg:hidden bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700">
+            <flux:sidebar.header>
+                <flux:sidebar.brand href="{{ url('/tonight') }}" name="Life" />
+            </flux:sidebar.header>
+
+            <flux:navlist>
+                @foreach ($navItems as $path => $item)
+                    <flux:navlist.item href="{{ url('/' . $path) }}" icon="{{ $item['icon'] }}" :current="$here === $path">{{ $item['label'] }}</flux:navlist.item>
+                @endforeach
+            </flux:navlist>
+
+            <flux:sidebar.group :heading="$currentUser->household->name ?? 'Household'">
+                <flux:sidebar.item icon="user-circle" :href="url('/profile')" :current="$here === 'profile'">Profile</flux:sidebar.item>
+                @if ($currentUser->household)
+                    <flux:sidebar.item icon="home" :href="url('/household')" :current="$here === 'household'">Household</flux:sidebar.item>
+                @endif
+                <form method="POST" action="{{ url('/logout') }}">@csrf
+                    <flux:sidebar.item icon="arrow-right-start-on-rectangle" as="button" type="submit">Sign out</flux:sidebar.item>
+                </form>
+            </flux:sidebar.group>
+
+            @if ($userHouseholds->count() > 1)
+                <flux:sidebar.group heading="Switch household">
+                    @foreach ($userHouseholds as $h)
+                        @if ($h->id === $currentUser->household_id)
+                            <flux:sidebar.item icon="check">{{ $h->name }}</flux:sidebar.item>
+                        @else
+                            <form method="POST" action="{{ route('household.switch', $h) }}">@csrf
+                                <flux:sidebar.item as="button" type="submit" icon="arrow-right-circle">{{ $h->name }}</flux:sidebar.item>
+                            </form>
+                        @endif
+                    @endforeach
+                </flux:sidebar.group>
+            @endif
+
+            <flux:sidebar.group heading="Appearance"
+                x-data="{ get value() { return $flux.appearance }, set value(v) { $flux.appearance = v } }"
+            >
+                <flux:sidebar.item icon="sun" as="button" type="button" x-on:click="value = 'light'" ::data-current="value === 'light'">Light</flux:sidebar.item>
+                <flux:sidebar.item icon="moon" as="button" type="button" x-on:click="value = 'dark'" ::data-current="value === 'dark'">Dark</flux:sidebar.item>
+                <flux:sidebar.item icon="computer-desktop" as="button" type="button" x-on:click="value = 'system'" ::data-current="value === 'system'">System</flux:sidebar.item>
+            </flux:sidebar.group>
+        </flux:sidebar>
+
+        <flux:header sticky class="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-4 lg:px-8">
+            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+
+            <flux:brand href="{{ url('/tonight') }}" name="Life" class="!me-6" />
+
+            <flux:navbar class="-mb-px hidden lg:flex">
+                @foreach ($navItems as $path => $item)
+                    <flux:navbar.item href="{{ url('/' . $path) }}" :current="$here === $path">{{ $item['label'] }}</flux:navbar.item>
                 @endforeach
             </flux:navbar>
 
             <flux:spacer />
 
-            <flux:dropdown position="bottom" align="end">
+            <flux:dropdown position="bottom" align="end" class="hidden lg:flex">
                 <flux:button size="sm" variant="ghost">
                     <flux:icon icon="sun" class="dark:hidden!" />
                     <flux:icon icon="moon" class="hidden! dark:block!" />
@@ -59,17 +106,13 @@
                 </flux:menu>
             </flux:dropdown>
 
-            <flux:dropdown position="bottom" align="end">
+            <flux:dropdown position="bottom" align="end" class="hidden lg:flex">
                 <flux:profile
-                    name="{{ auth()->user()->name }}"
-                    initials="{{ strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}"
-                    avatar="{{ auth()->user()->avatar }}"
+                    name="{{ $currentUser->name }}"
+                    initials="{{ strtoupper(mb_substr($currentUser->name, 0, 1)) }}"
+                    avatar="{{ $currentUser->avatar }}"
                     circle
                 />
-                @php
-                    $currentUser = auth()->user();
-                    $userHouseholds = $currentUser->households()->orderBy('name')->get();
-                @endphp
                 <flux:menu>
                     <flux:menu.group :heading="$currentUser->household->name ?? 'Household'">
                         <flux:menu.item icon="user-circle" :href="url('/profile')">Profile</flux:menu.item>

@@ -4,7 +4,7 @@
         <div class="flex items-center gap-2">
             <flux:button size="sm" variant="ghost" icon="chevron-left" wire:click="shiftWeek(-1)">Prev week</flux:button>
             <flux:button size="sm" variant="ghost" icon-trailing="chevron-right" wire:click="shiftWeek(1)">Next week</flux:button>
-            <flux:text size="sm" variant="subtle" class="ml-2">{{ $start->format('M j') }} – {{ $start->addDays(6)->format('M j') }}</flux:text>
+            <flux:text size="sm" variant="subtle" class="ml-2 whitespace-nowrap">{{ $start->format('M j') }} – {{ $start->addDays(6)->format('M j') }}</flux:text>
         </div>
     </div>
 

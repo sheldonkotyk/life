@@ -1,10 +1,12 @@
 <div class="space-y-6">
-    <div class="flex items-baseline justify-between">
-        <flux:heading size="xl">Family</flux:heading>
-        <div class="flex items-center gap-3">
-            <flux:text variant="subtle">{{ $members->count() }} {{ Str::plural('member', $members->count()) }}</flux:text>
-            <flux:button variant="primary" icon="plus" wire:click="create">Add family member</flux:button>
+    <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+            <flux:heading size="lg">Family</flux:heading>
+            <flux:text size="sm" variant="subtle">
+                Daily eaters. <flux:icon.user class="size-3 inline -mt-0.5 text-indigo-500" /> indicates a linked account.
+            </flux:text>
         </div>
+        <flux:button variant="primary" icon="plus" wire:click="create">Add person</flux:button>
     </div>
 
     {{-- Add / edit modal --}}
@@ -177,22 +179,53 @@
     {{-- Member cards --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         @foreach ($members as $m)
+            @php $isAdmin = $m->user && in_array($m->user->id, $adminIds, true); @endphp
             <flux:card>
                 <div class="flex items-start justify-between">
                     <div class="flex items-center gap-3">
                         <x-avatar :member="$m" size="lg" />
                         <div>
-                            <flux:heading size="lg">{{ $m->name }}</flux:heading>
-                            <flux:text size="sm" variant="subtle">
-                                {{ $m->is_child ? 'Child' : 'Adult' }}
-                                @if ($m->user) · has account @endif
-                                @if ($m->notes) · {{ $m->notes }} @endif
+                            <flux:heading size="lg" class="flex items-center gap-1.5">
+                                {{ $m->name }}
+                                @if ($m->user)
+                                    <flux:tooltip content="Linked to {{ $m->user->email }}">
+                                        <flux:icon.user class="size-4 text-indigo-500" />
+                                    </flux:tooltip>
+                                @endif
+                                @if ($isAdmin)
+                                    <flux:badge color="indigo" size="sm">Admin</flux:badge>
+                                @endif
+                            </flux:heading>
+                            <flux:text size="sm" variant="subtle" class="whitespace-nowrap">
+                                {{ $m->is_child ? 'Child' : 'Adult' }}@if ($m->notes) · {{ $m->notes }} @endif
                             </flux:text>
                         </div>
                     </div>
                     <div class="flex gap-1">
+                        @if ($m->user && $canManage)
+                            @if ($isAdmin)
+                                <flux:button
+                                    size="sm"
+                                    variant="ghost"
+                                    wire:click="removeAdmin({{ $m->user->id }})"
+                                    wire:confirm="Remove admin from {{ $m->name }}?"
+                                >
+                                    Remove admin
+                                </flux:button>
+                            @else
+                                <flux:button
+                                    size="sm"
+                                    variant="ghost"
+                                    wire:click="makeAdmin({{ $m->user->id }})"
+                                >
+                                    Make admin
+                                </flux:button>
+                            @endif
+                        @endif
                         <flux:button size="sm" variant="ghost" wire:click="edit({{ $m->id }})">Edit</flux:button>
-                        <flux:button size="sm" variant="danger" wire:click="delete({{ $m->id }})" wire:confirm="Remove {{ $m->name }}?">Remove</flux:button>
+                        @unless ($m->user)
+                            <flux:button size="sm" variant="danger" wire:click="delete({{ $m->id }})" wire:confirm="Remove {{ $m->name }}?">Remove</flux:button>
+                        @endunless
                     </div>
                 </div>
 

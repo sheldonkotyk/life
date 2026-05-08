@@ -1,12 +1,12 @@
 <div class="space-y-6">
     <div class="flex flex-wrap gap-3 items-baseline justify-between">
         <flux:heading size="xl">Macro Tracker</flux:heading>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <flux:button size="sm" variant="ghost" icon="chevron-left" wire:click="shiftDay(-1)">Prev</flux:button>
             <flux:button size="sm" wire:click="jumpToToday">Today</flux:button>
             <flux:button size="sm" variant="ghost" icon-trailing="chevron-right" wire:click="shiftDay(1)">Next</flux:button>
             <flux:input type="date" size="sm" wire:model.live="date" />
-            <flux:text size="sm" variant="subtle" class="ml-1">{{ $displayDate->format('l, M j') }}</flux:text>
+            <flux:text size="sm" variant="subtle" class="ml-1 whitespace-nowrap">{{ $displayDate->format('l, M j') }}</flux:text>
         </div>
     </div>
 
@@ -29,7 +29,7 @@
                     <flux:text size="sm" variant="subtle">
                         {{ count($perMemberMeals[$m->id]) }} {{ Str::plural('meal', count($perMemberMeals[$m->id])) }} today
                         @if (! $hasAnyTarget)
-                            · <flux:link href="{{ url('/family') }}">set targets</flux:link>
+                            · <flux:link href="{{ route('household') }}">set targets</flux:link>
                         @endif
                     </flux:text>
                 </div>
@@ -100,7 +100,7 @@
     @empty
         <flux:card class="text-center py-12">
             <flux:text variant="subtle">No family members yet.</flux:text>
-            <flux:link href="{{ url('/family') }}" class="ml-1">Add some</flux:link>
+            <flux:link href="{{ route('household') }}" class="ml-1">Add some</flux:link>
         </flux:card>
     @endforelse
 </div>

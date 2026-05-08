@@ -24,6 +24,8 @@ class HouseholdSettings extends Component
 
     public ?int $successorId = null;
 
+    public string $tab = 'people';
+
     public function mount(): void
     {
         $household = auth()->user()->household;
@@ -96,34 +98,6 @@ class HouseholdSettings extends Component
 
         session()->flash('status', 'You joined '.$household->name.'.');
         $this->redirectRoute('household', navigate: true);
-    }
-
-    public function makeAdmin(int $userId): void
-    {
-        $this->authorizeManage();
-
-        $household = $this->household();
-        abort_unless($household->users()->where('users.id', $userId)->exists(), 404);
-
-        $household->users()->updateExistingPivot($userId, ['role' => 'admin']);
-        session()->flash('status', 'Administrator added.');
-    }
-
-    public function removeAdmin(int $userId): void
-    {
-        $this->authorizeManage();
-
-        $household = $this->household();
-        abort_unless($household->users()->where('users.id', $userId)->exists(), 404);
-
-        if ($household->admins()->count() <= 1 && $household->admins()->where('users.id', $userId)->exists()) {
-            session()->flash('status', 'A household must have at least one administrator.');
-
-            return;
-        }
-
-        $household->users()->updateExistingPivot($userId, ['role' => null]);
-        session()->flash('status', 'Administrator removed.');
     }
 
     public function leaveHousehold(): void

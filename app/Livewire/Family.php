@@ -252,6 +252,32 @@ class Family extends Component
         }
     }
 
+    public function makeAdmin(int $userId): void
+    {
+        $household = auth()->user()->household;
+        abort_unless($household && auth()->user()->canManageHousehold($household), 403);
+        abort_unless($household->users()->where('users.id', $userId)->exists(), 404);
+
+        $household->users()->updateExistingPivot($userId, ['role' => 'admin']);
+        session()->flash('status', 'Administrator added.');
+    }
+
+    public function removeAdmin(int $userId): void
+    {
+        $household = auth()->user()->household;
+        abort_unless($household && auth()->user()->canManageHousehold($household), 403);
+        abort_unless($household->users()->where('users.id', $userId)->exists(), 404);
+
+        if ($household->admins()->count() <= 1 && $household->admins()->where('users.id', $userId)->exists()) {
+            session()->flash('status', 'A household must have at least one administrator.');
+
+            return;
+        }
+
+        $household->users()->updateExistingPivot($userId, ['role' => null]);
+        session()->flash('status', 'Administrator removed.');
+    }
+
     private function householdMembers()
     {
         return FamilyMember::where('household_id', auth()->user()->household_id);
@@ -259,9 +285,14 @@ class Family extends Component
 
     public function render()
     {
+        $household = auth()->user()->household;
+        $adminIds = $household ? $household->admins()->pluck('users.id')->all() : [];
+
         return view('livewire.family', [
             'members' => $this->householdMembers()->where('is_guest', false)->with('preferences', 'user')->orderBy('is_child')->orderBy('name')->get(),
             'guests' => $this->householdMembers()->where('is_guest', true)->with('preferences', 'user')->orderBy('name')->get(),
+            'adminIds' => $adminIds,
+            'canManage' => $household ? auth()->user()->canManageHousehold($household) : false,
         ]);
     }
 }

@@ -12,7 +12,7 @@
             <flux:button size="sm" variant="ghost" icon="chevron-left" wire:click="shiftWeek(-1)">Prev</flux:button>
             <flux:button size="sm" wire:click="jumpToToday">Today</flux:button>
             <flux:button size="sm" variant="ghost" icon-trailing="chevron-right" wire:click="shiftWeek(1)">Next</flux:button>
-            <flux:text size="sm" variant="subtle" class="w-full sm:w-auto sm:ml-2">{{ $weekStartDate->format('M j') }} – {{ $weekStartDate->addDays(6)->format('M j, Y') }}</flux:text>
+            <flux:text size="sm" variant="subtle" class="w-full md:w-auto md:ml-2 whitespace-nowrap">{{ $weekStartDate->format('M j') }} – {{ $weekStartDate->addDays(6)->format('M j, Y') }}</flux:text>
 
             @if ($this->members->count() > 1)
                 <flux:select wire:model.live="memberId" class:input="w-full sm:w-56 sm:ml-2">
