@@ -8,7 +8,7 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->in('Feature', 'Unit');
+    ->in('Feature', 'Unit', 'Browser');
 
 function loginUser(?Household $household = null): User
 {
@@ -16,10 +16,11 @@ function loginUser(?Household $household = null): User
     $user = User::create([
         'household_id' => $household->id,
         'name' => 'Test User',
-        'email' => 'user-' . uniqid() . '@example.test',
+        'email' => 'user-'.uniqid().'@example.test',
     ]);
     $user->households()->syncWithoutDetaching([$household->id]);
     test()->actingAs($user);
+
     return $user;
 }
 
@@ -29,15 +30,17 @@ function loginApiUser(?Household $household = null): User
     $user = User::create([
         'household_id' => $household->id,
         'name' => 'API User',
-        'email' => 'api-' . uniqid() . '@example.test',
+        'email' => 'api-'.uniqid().'@example.test',
     ]);
     $user->households()->syncWithoutDetaching([$household->id]);
     Sanctum::actingAs($user);
+
     return $user;
 }
 
 function appleJwt(string $sub, array $extra = []): string
 {
     $payload = base64_encode(json_encode(['sub' => $sub] + $extra));
-    return 'header.' . rtrim(strtr($payload, '+/', '-_'), '=') . '.sig';
+
+    return 'header.'.rtrim(strtr($payload, '+/', '-_'), '=').'.sig';
 }

@@ -129,3 +129,28 @@ it('does not offer leftovers from the same date and slot being edited', function
     $names = collect($component->instance()->availableLeftovers)->pluck('custom_name')->all();
     expect($names)->toContain('Tomato Soup')->not->toContain('Chuck Roast');
 });
+
+it('creates a recipe inline via createRecipeFromName and selects it', function () {
+    $user = loginUser();
+
+    Livewire::test(Planner::class)
+        ->call('openSlot', '2026-05-04', 'dinner')
+        ->set('newRecipeName', '  Chili  ')
+        ->call('createRecipeFromName')
+        ->assertSet('newRecipeName', '');
+
+    $recipe = Recipe::where('household_id', $user->household_id)->firstWhere('name', 'Chili');
+    expect($recipe)->not->toBeNull()
+        ->and($recipe->servings)->toBe(4);
+});
+
+it('does not create a recipe when newRecipeName is blank', function () {
+    $user = loginUser();
+
+    Livewire::test(Planner::class)
+        ->call('openSlot', '2026-05-04', 'dinner')
+        ->set('newRecipeName', '   ')
+        ->call('createRecipeFromName');
+
+    expect(Recipe::where('household_id', $user->household_id)->count())->toBe(0);
+});
