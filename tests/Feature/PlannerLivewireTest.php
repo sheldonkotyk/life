@@ -2,6 +2,7 @@
 
 use App\Livewire\Planner;
 use App\Models\FamilyMember;
+use App\Models\FamilyMemberUnavailability;
 use App\Models\MealPlan;
 use App\Models\Recipe;
 use App\Models\RecipeIngredient;
@@ -20,6 +21,7 @@ function makeRecipeWith(int $householdId, array $ingredients, int $servings = 4)
             'sort_order' => $i,
         ], $ing));
     }
+
     return $recipe->fresh('ingredients');
 }
 
@@ -27,13 +29,13 @@ it('excludes unavailable members from default attendees on a fresh slot', functi
     $user = loginUser();
     $available = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'In']);
     $unavailable = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'Out']);
-    \App\Models\FamilyMemberUnavailability::create([
+    FamilyMemberUnavailability::create([
         'family_member_id' => $unavailable->id,
         'date' => '2026-05-04',
         'slot' => 'dinner',
     ]);
 
-    $component = \Livewire\Livewire::test(\App\Livewire\Planner::class)
+    $component = Livewire::test(Planner::class)
         ->call('openSlot', '2026-05-04', 'dinner');
 
     expect($component->get('attendees'))
@@ -100,4 +102,30 @@ it('ignores skipped-ingredient ids that do not belong to the chosen recipe', fun
 
     $plan = MealPlan::first();
     expect($plan->skippedIngredients)->toHaveCount(0);
+});
+
+it('does not offer leftovers from the same date and slot being edited', function () {
+    $user = loginUser();
+    MealPlan::create([
+        'household_id' => $user->household_id,
+        'date' => '2026-05-07',
+        'slot' => 'dinner',
+        'custom_name' => 'Chuck Roast',
+        'save_leftovers' => true,
+        'leftover_servings' => 3,
+    ]);
+    MealPlan::create([
+        'household_id' => $user->household_id,
+        'date' => '2026-05-06',
+        'slot' => 'dinner',
+        'custom_name' => 'Tomato Soup',
+        'save_leftovers' => true,
+        'leftover_servings' => 2,
+    ]);
+
+    $component = Livewire::test(Planner::class)
+        ->call('openSlot', '2026-05-07', 'dinner');
+
+    $names = collect($component->viewData('availableLeftovers'))->pluck('custom_name')->all();
+    expect($names)->toContain('Tomato Soup')->not->toContain('Chuck Roast');
 });

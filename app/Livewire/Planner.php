@@ -286,6 +286,12 @@ class Planner extends Component
             ->whereNotIn('id', $consumedLeftoverIds)
             ->whereDate('date', '>=', $start->subDays(3)->toDateString())
             ->whereDate('date', '<=', $end->toDateString())
+            ->when($this->editingDate && $this->editingSlot, function ($q) {
+                $q->where(function ($q) {
+                    $q->whereDate('date', '!=', $this->editingDate)
+                        ->orWhere('slot', '!=', $this->editingSlot);
+                });
+            })
             ->with('recipe')
             ->get();
 
