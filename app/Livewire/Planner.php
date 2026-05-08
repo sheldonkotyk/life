@@ -10,12 +10,18 @@ use App\Models\RecipeIngredient;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 class Planner extends Component
 {
     public string $weekStart;
+
+    #[Url(as: 'mode', except: 'plan')]
+    public string $mode = 'plan';
+
+    public ?int $memberId = null;
 
     public ?int $editingPlanId = null;
 
@@ -49,6 +55,13 @@ class Planner extends Component
     {
         $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->toDateString();
 
+        $this->memberId = auth()->user()->familyMember?->id
+            ?? FamilyMember::where('household_id', auth()->user()->household_id)->value('id');
+
+        if (! in_array($this->mode, ['plan', 'attendance'], true)) {
+            $this->mode = 'plan';
+        }
+
         $openDate = request()->query('date');
         $openSlot = request()->query('slot');
         if ($openDate && in_array($openSlot, ['breakfast', 'lunch', 'dinner', 'snack'], true)) {
@@ -59,6 +72,11 @@ class Planner extends Component
                 ->first();
             $this->openSlot($openDate, $openSlot, $existing?->id);
         }
+    }
+
+    public function setMode(string $mode): void
+    {
+        $this->mode = in_array($mode, ['plan', 'attendance'], true) ? $mode : 'plan';
     }
 
     public function shiftWeek(int $weeks): void

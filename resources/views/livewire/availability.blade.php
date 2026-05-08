@@ -1,31 +1,4 @@
-<div class="space-y-6">
-    @php
-        $weekStartDate = \Carbon\CarbonImmutable::parse($this->weekStart);
-    @endphp
-    <div class="flex flex-wrap gap-3 items-baseline justify-between">
-        <div>
-            <flux:heading size="xl">Meal Attendance</flux:heading>
-            <flux:text size="sm" variant="subtle">Check the meals you'll be there for this week.</flux:text>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-            <flux:button size="sm" variant="ghost" icon="chevron-left" wire:click="shiftWeek(-1)">Prev</flux:button>
-            <flux:button size="sm" wire:click="jumpToToday">Today</flux:button>
-            <flux:button size="sm" variant="ghost" icon-trailing="chevron-right" wire:click="shiftWeek(1)">Next</flux:button>
-            <flux:text size="sm" variant="subtle" class="w-full md:w-auto md:ml-2 whitespace-nowrap">{{ $weekStartDate->format('M j') }} – {{ $weekStartDate->addDays(6)->format('M j, Y') }}</flux:text>
-
-            @if ($this->members->count() > 1)
-                <flux:select wire:model.live="memberId" class:input="w-full sm:w-56 sm:ml-2">
-                    @foreach ($this->members as $m)
-                        <flux:select.option value="{{ $m->id }}">
-                            {{ $m->name }}@if ($m->is_guest) (guest)@endif
-                        </flux:select.option>
-                    @endforeach
-                </flux:select>
-            @endif
-        </div>
-    </div>
-
+<div class="space-y-4">
     {{-- Mobile: stacked by day --}}
     <div class="lg:hidden space-y-3">
         @foreach ($this->days as $d)

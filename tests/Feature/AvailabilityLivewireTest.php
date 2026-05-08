@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Availability;
+use App\Livewire\Planner;
 use App\Models\FamilyMember;
 use App\Models\FamilyMemberUnavailability;
 use App\Models\MealPlan;
@@ -42,7 +43,7 @@ it('marks a slot as unavailable and detaches from existing meal plans', function
 
 it('toggles a slot back to attending and removes the unavailability', function () {
     $user = loginUser();
-    FamilyMember::create([
+    $member = FamilyMember::create([
         'household_id' => $user->household_id,
         'user_id' => $user->id,
         'name' => 'Me',
@@ -58,7 +59,7 @@ it('toggles a slot back to attending and removes the unavailability', function (
 
 it('toggles a whole slot across the week back to attending', function () {
     $user = loginUser();
-    FamilyMember::create([
+    $member = FamilyMember::create([
         'household_id' => $user->household_id,
         'user_id' => $user->id,
         'name' => 'Me',
@@ -73,7 +74,7 @@ it('toggles a whole slot across the week back to attending', function () {
 
 it('toggles a whole day back to attending', function () {
     $user = loginUser();
-    FamilyMember::create([
+    $member = FamilyMember::create([
         'household_id' => $user->household_id,
         'user_id' => $user->id,
         'name' => 'Me',
@@ -91,12 +92,12 @@ it('falls back to any household member when the user has none', function () {
     $user = loginUser();
     $other = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'OnlyOne']);
 
-    Livewire::test(Availability::class)->assertSet('memberId', $other->id);
+    Livewire::test(Planner::class)->assertSet('memberId', $other->id);
 });
 
 it('ignores unknown slots', function () {
     $user = loginUser();
-    FamilyMember::create([
+    $member = FamilyMember::create([
         'household_id' => $user->household_id,
         'user_id' => $user->id,
         'name' => 'Me',

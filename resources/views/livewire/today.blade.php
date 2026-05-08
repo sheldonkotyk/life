@@ -9,7 +9,7 @@
             <flux:heading size="lg">Nothing planned today</flux:heading>
             <flux:text class="mt-1">Plan a meal to get started.</flux:text>
             <div class="mt-4">
-                <flux:button :href="url('/plan?date=' . $today->toDateString() . '&slot=dinner')" variant="primary">Plan today's meals</flux:button>
+                <flux:button :href="url('/meal-plan?date=' . $today->toDateString() . '&slot=dinner')" variant="primary">Plan today's meals</flux:button>
             </div>
         </flux:card>
     @else
@@ -155,7 +155,7 @@
                 <flux:text size="sm" variant="subtle">Not planned yet:</flux:text>
                 <div class="mt-2 flex flex-wrap gap-2">
                     @foreach ($unplannedSlots as $slot)
-                        <flux:button size="sm" variant="ghost" :href="url('/plan?date=' . $today->toDateString() . '&slot=' . $slot)">
+                        <flux:button size="sm" variant="ghost" :href="url('/meal-plan?date=' . $today->toDateString() . '&slot=' . $slot)">
                             + {{ ucfirst($slot) }}
                         </flux:button>
                     @endforeach

@@ -3,7 +3,6 @@
 use App\Http\Controllers\AppleNotificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TimezoneController;
-use App\Livewire\Availability;
 use App\Livewire\HouseholdSettings;
 use App\Livewire\Planner;
 use App\Livewire\Profile;
@@ -35,13 +34,14 @@ Route::post('/logout', [AuthController::class, 'logout']);
 Route::middleware('auth')->group(function () {
     Route::get('/today', Today::class)->name('today');
     Route::redirect('/tonight', '/today');
-    Route::get('/plan', Planner::class)->name('plan');
+    Route::get('/meal-plan', Planner::class)->name('meal-plan');
+    Route::redirect('/plan', '/meal-plan');
     Route::redirect('/family', '/household');
     Route::get('/recipes', Recipes::class);
     Route::get('/recipes/browse', RecipeBrowser::class)->name('recipes.browse');
     Route::get('/shopping', ShoppingList::class);
     Route::get('/tracker', Tracker::class);
-    Route::get('/availability', Availability::class);
+    Route::redirect('/availability', '/meal-plan?mode=attendance');
     Route::get('/profile', Profile::class)->name('profile');
     Route::get('/household', HouseholdSettings::class)->name('household');
     Route::redirect('/household/meals', '/household')->name('household.meals');

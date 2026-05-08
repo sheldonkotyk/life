@@ -1,6 +1,14 @@
-<div class="space-y-6">
+<div class="space-y-6"
+    x-data="{ mode: @js($mode) }"
+    x-init="$watch('mode', v => { if ($wire.mode !== v) $wire.set('mode', v) })">
     <div class="flex flex-wrap gap-3 items-baseline justify-between">
-        <flux:heading size="xl">Weekly Plan</flux:heading>
+        <div>
+            <flux:heading size="xl">Meal Plan</flux:heading>
+            <flux:text size="sm" variant="subtle">
+                <span x-show="mode === 'plan'">Plan meals and mark who's eating.</span>
+                <span x-show="mode === 'attendance'" x-cloak>Check the meals you'll be there for this week.</span>
+            </flux:text>
+        </div>
         <div class="flex flex-wrap items-center gap-2">
             <flux:button size="sm" variant="ghost" icon="chevron-left" wire:click="shiftWeek(-1)">Prev</flux:button>
             <flux:button size="sm" wire:click="jumpToToday">Today</flux:button>
@@ -9,6 +17,36 @@
         </div>
     </div>
 
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="inline-flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 text-sm font-medium">
+            <button type="button" @click="mode = 'plan'"
+                :class="mode === 'plan' ? 'bg-white dark:bg-zinc-900 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'"
+                class="px-4 py-1.5 rounded-md transition">
+                <flux:icon icon="calendar-days" variant="micro" class="inline -mt-0.5 mr-1" /> Plan
+            </button>
+            <button type="button" @click="mode = 'attendance'"
+                :class="mode === 'attendance' ? 'bg-white dark:bg-zinc-900 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'"
+                class="px-4 py-1.5 rounded-md transition">
+                <flux:icon icon="user-group" variant="micro" class="inline -mt-0.5 mr-1" /> Attendance
+            </button>
+        </div>
+
+        @if ($members->count() > 1)
+            <flux:select wire:model.live="memberId" class:input="w-full sm:w-56" x-show="mode === 'attendance'" x-cloak>
+                @foreach ($members as $m)
+                    <flux:select.option value="{{ $m->id }}">
+                        {{ $m->name }}@if ($m->is_guest) (guest)@endif
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+        @endif
+    </div>
+
+    <div x-show="mode === 'attendance'" x-cloak>
+        <livewire:availability :weekStart="$weekStart" :memberId="$memberId" :key="'attendance-'.$weekStart.'-'.$memberId" />
+    </div>
+
+    <div x-show="mode === 'plan'">
     {{-- Mobile: stacked by day --}}
     <div class="lg:hidden space-y-3">
         @foreach ($days as $d)
@@ -146,6 +184,8 @@
             </tbody>
         </table>
     </flux:card>
+    </div>
+
     </div>
 
     {{-- Edit modal --}}

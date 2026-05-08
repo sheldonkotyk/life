@@ -19,23 +19,13 @@ class Availability extends Component
 
     public string $weekStart;
 
-    public function mount(): void
+    public function mount(?int $memberId = null, ?string $weekStart = null): void
     {
-        $this->memberId = auth()->user()->familyMember?->id
+        $this->memberId = $memberId
+            ?? auth()->user()->familyMember?->id
             ?? FamilyMember::where('household_id', auth()->user()->household_id)->value('id');
-        $this->weekStart = CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
-    }
-
-    public function shiftWeek(int $weeks): void
-    {
-        $this->weekStart = CarbonImmutable::parse($this->weekStart)->addWeeks($weeks)->toDateString();
-        unset($this->notAttendingKeys);
-    }
-
-    public function jumpToToday(): void
-    {
-        $this->weekStart = CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
-        unset($this->notAttendingKeys);
+        $this->weekStart = $weekStart
+            ?? CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
     }
 
     #[Computed]

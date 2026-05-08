@@ -24,8 +24,7 @@
             $userHouseholds = $currentUser->households()->orderBy('name')->get();
             $navItems = [
                 'today' => ['label' => 'Today', 'icon' => 'sun'],
-                'plan' => ['label' => 'Plan', 'icon' => 'calendar-days'],
-                'availability' => ['label' => 'Attendance', 'icon' => 'user-group'],
+                'meal-plan' => ['label' => 'Meal Plan', 'icon' => 'calendar-days'],
                 'recipes' => ['label' => 'Recipes', 'icon' => 'book-open'],
                 'shopping' => ['label' => 'Shopping', 'icon' => 'shopping-cart'],
                 'tracker' => ['label' => 'Tracker', 'icon' => 'chart-bar'],
@@ -43,37 +42,50 @@
                 @endforeach
             </flux:navlist>
 
-            <flux:sidebar.group :heading="$currentUser->household->name ?? 'Household'">
-                <flux:sidebar.item icon="user-circle" :href="url('/profile')" :current="$here === 'profile'">Profile</flux:sidebar.item>
-                @if ($currentUser->household)
-                    <flux:sidebar.item icon="home" :href="url('/household')" :current="$here === 'household'">Household</flux:sidebar.item>
-                @endif
-                <form method="POST" action="{{ url('/logout') }}">@csrf
-                    <flux:sidebar.item icon="arrow-right-start-on-rectangle" as="button" type="submit">Sign out</flux:sidebar.item>
-                </form>
-            </flux:sidebar.group>
+            <flux:sidebar.spacer />
 
-            @if ($userHouseholds->count() > 1)
-                <flux:sidebar.group heading="Switch household">
-                    @foreach ($userHouseholds as $h)
-                        @if ($h->id === $currentUser->household_id)
-                            <flux:sidebar.item icon="check">{{ $h->name }}</flux:sidebar.item>
-                        @else
-                            <form method="POST" action="{{ route('household.switch', $h) }}">@csrf
-                                <flux:sidebar.item as="button" type="submit" icon="arrow-right-circle">{{ $h->name }}</flux:sidebar.item>
-                            </form>
+            <flux:dropdown position="top" align="start">
+                <flux:sidebar.profile
+                    name="{{ $currentUser->name }}"
+                    avatar="{{ $currentUser->avatar }}"
+                />
+                <flux:menu>
+                    <flux:menu.group :heading="$currentUser->household->name ?? 'Household'">
+                        <flux:menu.item icon="user-circle" :href="url('/profile')">Profile</flux:menu.item>
+                        @if ($currentUser->household)
+                            <flux:menu.item icon="home" :href="url('/household')">Household</flux:menu.item>
                         @endif
-                    @endforeach
-                </flux:sidebar.group>
-            @endif
+                        <form method="POST" action="{{ url('/logout') }}">@csrf
+                            <flux:menu.item icon="arrow-right-start-on-rectangle" as="button" type="submit">Sign out</flux:menu.item>
+                        </form>
+                    </flux:menu.group>
 
-            <flux:sidebar.group heading="Appearance"
-                x-data="{ get value() { return $flux.appearance }, set value(v) { $flux.appearance = v } }"
-            >
-                <flux:sidebar.item icon="sun" as="button" type="button" x-on:click="value = 'light'" ::data-current="value === 'light'">Light</flux:sidebar.item>
-                <flux:sidebar.item icon="moon" as="button" type="button" x-on:click="value = 'dark'" ::data-current="value === 'dark'">Dark</flux:sidebar.item>
-                <flux:sidebar.item icon="computer-desktop" as="button" type="button" x-on:click="value = 'system'" ::data-current="value === 'system'">System</flux:sidebar.item>
-            </flux:sidebar.group>
+                    @if ($userHouseholds->count() > 1)
+                        <flux:menu.separator />
+                        <flux:menu.group heading="Switch household">
+                            @foreach ($userHouseholds as $h)
+                                @if ($h->id === $currentUser->household_id)
+                                    <flux:menu.item icon="check">{{ $h->name }}</flux:menu.item>
+                                @else
+                                    <form method="POST" action="{{ route('household.switch', $h) }}">@csrf
+                                        <flux:menu.item as="button" type="submit" icon="arrow-right-circle">{{ $h->name }}</flux:menu.item>
+                                    </form>
+                                @endif
+                            @endforeach
+                        </flux:menu.group>
+                    @endif
+
+                    <flux:menu.separator />
+
+                    <div class="flex gap-1 px-2 py-1.5"
+                        x-data="{ get value() { return $flux.appearance }, set value(v) { $flux.appearance = v } }"
+                    >
+                        <flux:button size="sm" variant="ghost" icon="sun" square x-on:click.stop="value = 'light'" ::data-current="value === 'light'" class="data-current:bg-zinc-100 dark:data-current:bg-zinc-700" />
+                        <flux:button size="sm" variant="ghost" icon="moon" square x-on:click.stop="value = 'dark'" ::data-current="value === 'dark'" class="data-current:bg-zinc-100 dark:data-current:bg-zinc-700" />
+                        <flux:button size="sm" variant="ghost" icon="computer-desktop" square x-on:click.stop="value = 'system'" ::data-current="value === 'system'" class="data-current:bg-zinc-100 dark:data-current:bg-zinc-700" />
+                    </div>
+                </flux:menu>
+            </flux:dropdown>
         </flux:sidebar>
 
         <flux:header sticky class="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-4 lg:px-8">
