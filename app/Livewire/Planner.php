@@ -8,6 +8,7 @@ use App\Models\MealPlan;
 use App\Models\Recipe;
 use App\Models\RecipeIngredient;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -24,7 +25,7 @@ class Planner extends Component
 
     public ?int $selectedRecipeId = null;
 
-    public ?int $selectedLeftoverId = null;
+    public array $selectedLeftoverIds = [];
 
     public string $customName = '';
 
@@ -84,9 +85,9 @@ class Planner extends Component
         $allMemberIds = FamilyMember::where('household_id', $hh)->where('is_guest', false)->pluck('id')->all();
 
         if ($planId) {
-            $plan = MealPlan::with('attendees', 'skippedIngredients')->where('household_id', $hh)->findOrFail($planId);
+            $plan = MealPlan::with('attendees', 'skippedIngredients', 'leftoverSources')->where('household_id', $hh)->findOrFail($planId);
             $this->selectedRecipeId = $plan->recipe_id;
-            $this->selectedLeftoverId = $plan->leftover_of_id;
+            $this->selectedLeftoverIds = $plan->leftoverSources->pluck('id')->all();
             $this->customName = $plan->custom_name ?? '';
             $this->notes = $plan->notes ?? '';
             $this->saveLeftovers = $plan->save_leftovers;
@@ -99,7 +100,7 @@ class Planner extends Component
             $this->endTime = $plan->end_time ? substr($plan->end_time, 0, 5) : null;
         } else {
             $this->selectedRecipeId = null;
-            $this->selectedLeftoverId = null;
+            $this->selectedLeftoverIds = [];
             $this->customName = '';
             $this->notes = '';
             $this->saveLeftovers = false;
@@ -114,9 +115,32 @@ class Planner extends Component
         }
     }
 
+    public function toggleLeftover(int $id): void
+    {
+        if (in_array($id, $this->selectedLeftoverIds, true)) {
+            $this->selectedLeftoverIds = array_values(array_diff($this->selectedLeftoverIds, [$id]));
+        } else {
+            $this->selectedLeftoverIds = [...$this->selectedLeftoverIds, $id];
+            $this->selectedRecipeId = null;
+        }
+    }
+
+    public function selectAllLeftovers(array $ids): void
+    {
+        $this->selectedLeftoverIds = $ids;
+        if (! empty($ids)) {
+            $this->selectedRecipeId = null;
+        }
+    }
+
+    public function clearLeftovers(): void
+    {
+        $this->selectedLeftoverIds = [];
+    }
+
     public function cancelEdit(): void
     {
-        $this->reset(['editingPlanId', 'editingDate', 'editingSlot', 'selectedRecipeId', 'selectedLeftoverId', 'customName', 'notes', 'saveLeftovers', 'leftoverServings', 'attendees', 'skippedIngredientIds', 'newRecipeName', 'startTime', 'endTime']);
+        $this->reset(['editingPlanId', 'editingDate', 'editingSlot', 'selectedRecipeId', 'selectedLeftoverIds', 'customName', 'notes', 'saveLeftovers', 'leftoverServings', 'attendees', 'skippedIngredientIds', 'newRecipeName', 'startTime', 'endTime']);
         $this->modal('edit-meal')->close();
     }
 
@@ -134,7 +158,7 @@ class Planner extends Component
         ]);
 
         $this->selectedRecipeId = $recipe->id;
-        $this->selectedLeftoverId = null;
+        $this->selectedLeftoverIds = [];
         $this->newRecipeName = '';
     }
 
@@ -147,12 +171,13 @@ class Planner extends Component
             'endTime' => ['nullable', 'date_format:H:i', 'after:startTime'],
         ]);
 
+        $usingLeftovers = ! empty($this->selectedLeftoverIds);
+
         $data = [
             'household_id' => $hh,
             'date' => $this->editingDate,
             'slot' => $this->editingSlot,
-            'recipe_id' => $this->selectedLeftoverId ? null : $this->selectedRecipeId,
-            'leftover_of_id' => $this->selectedLeftoverId,
+            'recipe_id' => $usingLeftovers ? null : $this->selectedRecipeId,
             'custom_name' => $this->customName ?: null,
             'notes' => $this->notes ?: null,
             'save_leftovers' => $this->saveLeftovers,
@@ -168,6 +193,12 @@ class Planner extends Component
             $plan = MealPlan::create($data);
         }
 
+        $sourceIds = MealPlan::where('household_id', $hh)
+            ->whereIn('id', $this->selectedLeftoverIds)
+            ->where('id', '!=', $plan->id)
+            ->pluck('id');
+        $plan->leftoverSources()->sync($sourceIds);
+
         $skippingIds = $plan->attendees()
             ->wherePivot('status', 'not_eating')
             ->pluck('family_members.id')->all();
@@ -179,7 +210,7 @@ class Planner extends Component
             + array_fill_keys($skippingIds, ['status' => 'not_eating']);
         $plan->attendees()->sync($syncData);
 
-        $effectiveRecipeId = $plan->recipe_id ?? $plan->leftoverOf?->recipe_id;
+        $effectiveRecipeId = $plan->recipe_id ?? $plan->leftoverSources()->first()?->recipe_id;
         if ($effectiveRecipeId) {
             $validIngredientIds = RecipeIngredient::where('recipe_id', $effectiveRecipeId)
                 ->whereIn('id', $this->skippedIngredientIds)->pluck('id');
@@ -222,7 +253,7 @@ class Planner extends Component
 
         $plans = MealPlan::where('household_id', $hh)
             ->whereBetween('date', [$start->startOfDay(), $end->endOfDay()])
-            ->with('recipe.ingredients', 'attendees.user', 'leftoverOf.recipe.ingredients', 'skippedIngredients')
+            ->with('recipe.ingredients', 'attendees.user', 'leftoverSources.recipe.ingredients', 'skippedIngredients')
             ->get()
             ->groupBy(fn ($p) => $p->date->toDateString().'|'.$p->slot);
 
@@ -247,9 +278,8 @@ class Planner extends Component
         }
 
         // Available leftovers: meals from past 3 days where save_leftovers=true and not yet consumed as leftover
-        $consumedLeftoverIds = MealPlan::where('household_id', $hh)
-            ->whereNotNull('leftover_of_id')
-            ->pluck('leftover_of_id')->all();
+        $consumedLeftoverIds = DB::table('meal_plan_leftover_uses')
+            ->pluck('source_meal_plan_id')->all();
 
         $availableLeftovers = MealPlan::where('household_id', $hh)
             ->where('save_leftovers', true)
@@ -261,17 +291,11 @@ class Planner extends Component
 
         $activeIngredients = collect();
         $activeRecipeServings = 1;
-        if ($this->editingDate) {
-            $activeRecipeId = $this->selectedRecipeId;
-            if (! $activeRecipeId && $this->selectedLeftoverId) {
-                $activeRecipeId = MealPlan::where('household_id', $hh)->find($this->selectedLeftoverId)?->recipe_id;
-            }
-            if ($activeRecipeId) {
-                $activeRecipe = Recipe::where('household_id', $hh)->with('ingredients')->find($activeRecipeId);
-                if ($activeRecipe) {
-                    $activeIngredients = $activeRecipe->ingredients;
-                    $activeRecipeServings = max(1, (int) $activeRecipe->servings);
-                }
+        if ($this->editingDate && $this->selectedRecipeId && empty($this->selectedLeftoverIds)) {
+            $activeRecipe = Recipe::where('household_id', $hh)->with('ingredients')->find($this->selectedRecipeId);
+            if ($activeRecipe) {
+                $activeIngredients = $activeRecipe->ingredients;
+                $activeRecipeServings = max(1, (int) $activeRecipe->servings);
             }
         }
 

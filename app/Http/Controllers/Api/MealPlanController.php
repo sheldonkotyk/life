@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\FamilyMember;
 use App\Models\MealPlan;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,7 @@ class MealPlanController extends Controller
 
         $plans = MealPlan::where('household_id', $hh)
             ->whereBetween('date', [$start, $end])
-            ->with('recipe', 'attendees', 'leftoverOf.recipe')
+            ->with('recipe', 'attendees', 'leftoverSources.recipe')
             ->orderBy('date')->orderBy('slot')
             ->get();
 
@@ -30,11 +31,14 @@ class MealPlanController extends Controller
         $data = $this->validateData($request);
         $data['household_id'] = $request->user()->household_id;
         $attendees = $data['attendee_ids'] ?? [];
-        unset($data['attendee_ids']);
+        $leftoverIds = $data['leftover_source_ids'] ?? [];
+        unset($data['attendee_ids'], $data['leftover_source_ids']);
 
         $plan = MealPlan::create($data);
         $plan->attendees()->sync($this->validAttendees($request, $attendees));
-        return response()->json($plan->load('recipe', 'attendees'), 201);
+        $plan->leftoverSources()->sync($this->validLeftoverSources($request, $leftoverIds, $plan->id));
+
+        return response()->json($plan->load('recipe', 'attendees', 'leftoverSources'), 201);
     }
 
     public function update(Request $request, MealPlan $plan): JsonResponse
@@ -42,19 +46,25 @@ class MealPlanController extends Controller
         $this->authorize($request, $plan);
         $data = $this->validateData($request);
         $attendees = $data['attendee_ids'] ?? null;
-        unset($data['attendee_ids']);
+        $leftoverIds = $data['leftover_source_ids'] ?? null;
+        unset($data['attendee_ids'], $data['leftover_source_ids']);
 
         $plan->update($data);
         if ($attendees !== null) {
             $plan->attendees()->sync($this->validAttendees($request, $attendees));
         }
-        return response()->json($plan->load('recipe', 'attendees'));
+        if ($leftoverIds !== null) {
+            $plan->leftoverSources()->sync($this->validLeftoverSources($request, $leftoverIds, $plan->id));
+        }
+
+        return response()->json($plan->load('recipe', 'attendees', 'leftoverSources'));
     }
 
     public function destroy(Request $request, MealPlan $plan): JsonResponse
     {
         $this->authorize($request, $plan);
         $plan->delete();
+
         return response()->json(['ok' => true]);
     }
 
@@ -67,7 +77,7 @@ class MealPlanController extends Controller
         $plans = MealPlan::where('household_id', $hh)
             ->whereBetween('date', [$start, $end])
             ->whereNotNull('recipe_id')
-            ->whereNull('leftover_of_id')
+            ->whereDoesntHave('leftoverSources')
             ->with('recipe.ingredients', 'attendees')
             ->get();
 
@@ -77,7 +87,7 @@ class MealPlanController extends Controller
             $servings = $plan->recipe->servings ?: 1;
             $scale = $eaters / $servings;
             foreach ($plan->recipe->ingredients as $ing) {
-                $key = strtolower(($ing->category ?: 'Other') . '|' . $ing->name . '|' . ($ing->unit ?? ''));
+                $key = strtolower(($ing->category ?: 'Other').'|'.$ing->name.'|'.($ing->unit ?? ''));
                 $list[$key] ??= [
                     'name' => $ing->name,
                     'unit' => $ing->unit,
@@ -98,6 +108,7 @@ class MealPlanController extends Controller
         return response()->json(array_values(array_map(function ($i) {
             $i['meals'] = array_values(array_unique($i['meals']));
             $i['notes'] = array_values(array_unique($i['notes']));
+
             return $i;
         }, $list)));
     }
@@ -108,7 +119,8 @@ class MealPlanController extends Controller
             'date' => ['required', 'date'],
             'slot' => ['required', 'in:breakfast,lunch,dinner,snack'],
             'recipe_id' => ['nullable', 'exists:recipes,id'],
-            'leftover_of_id' => ['nullable', 'exists:meal_plans,id'],
+            'leftover_source_ids' => ['nullable', 'array'],
+            'leftover_source_ids.*' => ['integer', 'exists:meal_plans,id'],
             'custom_name' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string'],
             'save_leftovers' => ['boolean'],
@@ -118,9 +130,17 @@ class MealPlanController extends Controller
         ]);
     }
 
+    private function validLeftoverSources(Request $request, array $ids, int $excludeId): array
+    {
+        return MealPlan::where('household_id', $request->user()->household_id)
+            ->whereIn('id', $ids)
+            ->where('id', '!=', $excludeId)
+            ->pluck('id')->all();
+    }
+
     private function validAttendees(Request $request, array $ids): array
     {
-        return \App\Models\FamilyMember::where('household_id', $request->user()->household_id)
+        return FamilyMember::where('household_id', $request->user()->household_id)
             ->whereIn('id', $ids)->pluck('id')->all();
     }
 

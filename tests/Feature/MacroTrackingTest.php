@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\FamilyMember;
 use App\Models\Household;
 use App\Models\MealPlan;
 use App\Models\Recipe;
@@ -160,10 +159,10 @@ it('uses the source recipe macros for leftover meal plans', function () {
         'household_id' => $hh->id,
         'date' => '2026-05-04',
         'slot' => 'lunch',
-        'leftover_of_id' => $original->id,
     ]);
+    $leftover->leftoverSources()->attach($original->id);
 
-    expect($leftover->fresh('leftoverOf.recipe.ingredients', 'skippedIngredients')->macrosPerServing()['calories'])
+    expect($leftover->fresh('leftoverSources.recipe.ingredients', 'skippedIngredients')->macrosPerServing()['calories'])
         ->toBe(100.0);
 });
 

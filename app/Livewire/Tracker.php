@@ -40,7 +40,7 @@ class Tracker extends Component
 
         $plans = MealPlan::where('household_id', $hh)
             ->whereDate('date', $this->date)
-            ->with('recipe.ingredients', 'leftoverOf.recipe.ingredients', 'skippedIngredients', 'attendees')
+            ->with('recipe.ingredients', 'leftoverSources.recipe.ingredients', 'skippedIngredients', 'attendees')
             ->get()
             ->sortBy(fn ($p) => array_search($p->slot, ['breakfast', 'lunch', 'dinner', 'snack']))
             ->values();

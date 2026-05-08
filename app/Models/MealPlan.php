@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MealPlan extends Model
 {
@@ -26,14 +25,24 @@ class MealPlan extends Model
         return $this->belongsTo(Recipe::class);
     }
 
-    public function leftoverOf(): BelongsTo
+    public function leftoverSources(): BelongsToMany
     {
-        return $this->belongsTo(MealPlan::class, 'leftover_of_id');
+        return $this->belongsToMany(
+            MealPlan::class,
+            'meal_plan_leftover_uses',
+            'meal_plan_id',
+            'source_meal_plan_id',
+        )->withTimestamps();
     }
 
-    public function leftoverMeals(): HasMany
+    public function leftoverConsumers(): BelongsToMany
     {
-        return $this->hasMany(MealPlan::class, 'leftover_of_id');
+        return $this->belongsToMany(
+            MealPlan::class,
+            'meal_plan_leftover_uses',
+            'source_meal_plan_id',
+            'meal_plan_id',
+        )->withTimestamps();
     }
 
     public function attendees(): BelongsToMany
@@ -53,19 +62,41 @@ class MealPlan extends Model
 
     public function effectiveRecipe(): ?Recipe
     {
-        return $this->recipe ?? $this->leftoverOf?->recipe;
+        return $this->recipe ?? $this->leftoverSources->first()?->recipe;
     }
 
     public function macrosPerServing(): array
     {
-        $recipe = $this->effectiveRecipe();
-        if (! $recipe) {
-            return ['calories' => 0.0, 'protein_g' => 0.0, 'carbs_g' => 0.0, 'fat_g' => 0.0];
+        $empty = ['calories' => 0.0, 'protein_g' => 0.0, 'carbs_g' => 0.0, 'fat_g' => 0.0];
+
+        if ($this->recipe_id) {
+            return $this->macrosForRecipe($this->recipe, $this->skippedIngredients->pluck('id')->all());
         }
-        $skipped = $this->skippedIngredients->pluck('id')->all();
+
+        $sources = $this->leftoverSources;
+        if ($sources->isEmpty()) {
+            return $empty;
+        }
+
+        $totals = $empty;
+        foreach ($sources as $source) {
+            $sourceMacros = $this->macrosForRecipe($source->recipe, []);
+            foreach ($totals as $k => $_) {
+                $totals[$k] += $sourceMacros[$k];
+            }
+        }
+
+        return array_map(fn ($v) => round($v, 1), $totals);
+    }
+
+    private function macrosForRecipe(?Recipe $recipe, array $skippedIds): array
+    {
         $sum = ['calories' => 0.0, 'protein_g' => 0.0, 'carbs_g' => 0.0, 'fat_g' => 0.0];
+        if (! $recipe) {
+            return $sum;
+        }
         foreach ($recipe->ingredients as $ing) {
-            if (in_array($ing->id, $skipped, true)) {
+            if (in_array($ing->id, $skippedIds, true)) {
                 continue;
             }
             foreach ($sum as $k => $_) {
@@ -99,10 +130,11 @@ class MealPlan extends Model
         if ($this->custom_name) {
             return $this->custom_name;
         }
-        if ($this->leftoverOf) {
-            $base = $this->leftoverOf->recipe?->name ?? $this->leftoverOf->custom_name ?? 'meal';
+        $sources = $this->leftoverSources;
+        if ($sources->isNotEmpty()) {
+            $names = $sources->map(fn ($s) => $s->recipe?->name ?? $s->custom_name ?? 'meal')->all();
 
-            return "Leftovers — {$base}";
+            return 'Leftovers — '.implode(' + ', $names);
         }
 
         return $this->recipe?->name ?? '(unplanned)';

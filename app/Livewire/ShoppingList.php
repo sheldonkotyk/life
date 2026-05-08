@@ -31,7 +31,7 @@ class ShoppingList extends Component
         $plans = MealPlan::where('household_id', $hh)
             ->whereBetween('date', [$start->startOfDay(), $end->endOfDay()])
             ->whereNotNull('recipe_id')
-            ->whereNull('leftover_of_id')
+            ->whereDoesntHave('leftoverSources')
             ->with('recipe.ingredients', 'attendees')
             ->get();
 

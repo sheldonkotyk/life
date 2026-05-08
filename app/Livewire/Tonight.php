@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\FamilyMember;
 use App\Models\MealPlan;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -57,7 +58,7 @@ class Tonight extends Component
 
         $plans = MealPlan::where('household_id', $hh)
             ->whereDate('date', $today->toDateString())
-            ->with('recipe.ingredients', 'attendees', 'leftoverOf.recipe.ingredients', 'skippedIngredients')
+            ->with('recipe.ingredients', 'attendees', 'leftoverSources.recipe.ingredients', 'skippedIngredients')
             ->get()
             ->sortBy(fn ($p) => ($slotOrder[$p->slot] ?? 99).'-'.$p->id)
             ->values();
@@ -112,9 +113,8 @@ class Tonight extends Component
             ->values();
 
         // Leftover suggestion: any unconsumed save_leftovers from past 3 days, excluding today
-        $consumedIds = MealPlan::where('household_id', $hh)
-            ->whereNotNull('leftover_of_id')
-            ->pluck('leftover_of_id')->all();
+        $consumedIds = DB::table('meal_plan_leftover_uses')
+            ->pluck('source_meal_plan_id')->all();
 
         $leftovers = MealPlan::where('household_id', $hh)
             ->where('save_leftovers', true)

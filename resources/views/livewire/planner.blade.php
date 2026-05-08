@@ -158,14 +158,29 @@
                 </div>
 
                 @if ($availableLeftovers->isNotEmpty() && ! $editingPlanId)
+                    @php $allLeftoverIds = $availableLeftovers->pluck('id')->all(); @endphp
                     <div>
-                        <flux:text size="xs" variant="subtle" class="uppercase tracking-wide mb-2 block">Use leftovers</flux:text>
+                        <div class="flex items-baseline justify-between mb-2">
+                            <flux:text size="xs" variant="subtle" class="uppercase tracking-wide">Use leftovers</flux:text>
+                            <div class="flex gap-3 text-xs">
+                                @if (count($selectedLeftoverIds) < count($allLeftoverIds))
+                                    <button type="button" wire:click="selectAllLeftovers({{ json_encode($allLeftoverIds) }})" class="text-amber-600 hover:text-amber-700">Select all</button>
+                                @endif
+                                @if (! empty($selectedLeftoverIds))
+                                    <button type="button" wire:click="clearLeftovers" class="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">Clear</button>
+                                @endif
+                            </div>
+                        </div>
                         <div class="space-y-1">
                             @foreach ($availableLeftovers as $lo)
-                                <button wire:click="$set('selectedLeftoverId', {{ $lo->id }}); $set('selectedRecipeId', null)"
-                                        class="w-full text-left p-2 rounded-md border {{ $selectedLeftoverId === $lo->id ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800' }}">
-                                    <div class="text-sm font-medium">🥡 {{ $lo->recipe?->name ?? $lo->custom_name }}</div>
-                                    <flux:text size="xs" variant="subtle">{{ $lo->date->format('D, M j') }} · {{ $lo->leftover_servings }} servings</flux:text>
+                                @php $checked = in_array($lo->id, $selectedLeftoverIds); @endphp
+                                <button type="button" wire:click="toggleLeftover({{ $lo->id }})"
+                                        class="w-full text-left p-2 rounded-md border flex items-start gap-2 {{ $checked ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800' }}">
+                                    <flux:checkbox :checked="$checked" class="mt-0.5 pointer-events-none" />
+                                    <div class="flex-1">
+                                        <div class="text-sm font-medium">🥡 {{ $lo->recipe?->name ?? $lo->custom_name }}</div>
+                                        <flux:text size="xs" variant="subtle">{{ $lo->date->format('D, M j') }} · {{ $lo->leftover_servings }} servings</flux:text>
+                                    </div>
                                 </button>
                             @endforeach
                         </div>
@@ -174,7 +189,7 @@
 
                 <flux:field>
                     <flux:label>Recipe</flux:label>
-                    <flux:select wire:model.live="selectedRecipeId" wire:change="$set('selectedLeftoverId', null)">
+                    <flux:select wire:model.live="selectedRecipeId" wire:change="clearLeftovers">
                         <flux:select.option value="">— None / custom —</flux:select.option>
                         @foreach ($recipes as $r)
                             <flux:select.option value="{{ $r->id }}">{{ $r->name }}@if ($r->makes_leftovers) (leftovers) @endif</flux:select.option>

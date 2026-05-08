@@ -153,13 +153,13 @@ it('excludes leftover meals from the shopping list', function () {
         'slot' => 'dinner',
         'recipe_id' => $recipe->id,
     ]);
-    MealPlan::create([
+    $leftoverPlan = MealPlan::create([
         'household_id' => $user->household_id,
         'date' => now()->startOfWeek()->addDay()->toDateString(),
         'slot' => 'lunch',
         'recipe_id' => $recipe->id,
-        'leftover_of_id' => $base->id,
     ]);
+    $leftoverPlan->leftoverSources()->attach($base->id);
 
     $items = $this->getJson('/api/shopping-list')->assertOk()->json();
     expect(collect($items)->pluck('name')->all())->toBe(['rice'])
