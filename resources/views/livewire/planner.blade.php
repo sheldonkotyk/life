@@ -326,10 +326,8 @@
                 </flux:card>
             </div>
         </div>
-    @endisland
-    </div>
 
-    {{-- Edit modal --}}
+    {{-- Edit modal (kept inside the island so it re-renders when openSlot fires) --}}
     <flux:modal name="edit-meal" @close="cancelEdit" class="md:max-w-3xl md:w-[48rem]">
         @if ($editingDate)
             <div class="space-y-4">
@@ -488,4 +486,6 @@
             </div>
         @endif
     </flux:modal>
+    @endisland
+    </div>
 </div>
