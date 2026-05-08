@@ -30,7 +30,7 @@
                                 <button
                                     wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}', {{ $plan->id }})"
                                     class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1">
-                                    <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{{ $plan->displayName() }}</div>
+                                    <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100 break-words">{{ $plan->displayName() }}</div>
                                     @php $mp = $plan->macrosPerServing(); @endphp
                                     @if ($mp['calories'] > 0)
                                         <div class="text-[11px] text-zinc-500 mt-0.5">{{ round($mp['calories']) }} kcal · P{{ $mp['protein_g'] }} C{{ $mp['carbs_g'] }} F{{ $mp['fat_g'] }}</div>
@@ -103,7 +103,7 @@
                                     <button
                                         wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}', {{ $plan->id }})"
                                         class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1">
-                                        <div class="text-xs font-semibold text-zinc-800 dark:text-zinc-100 truncate">{{ $plan->displayName() }}</div>
+                                        <div class="text-xs font-semibold text-zinc-800 dark:text-zinc-100 break-words">{{ $plan->displayName() }}</div>
                                         @php $mp = $plan->macrosPerServing(); @endphp
                                         @if ($mp['calories'] > 0)
                                             <div class="text-[10px] text-zinc-500 mt-0.5">{{ round($mp['calories']) }} kcal · P{{ $mp['protein_g'] }} C{{ $mp['carbs_g'] }} F{{ $mp['fat_g'] }}</div>
