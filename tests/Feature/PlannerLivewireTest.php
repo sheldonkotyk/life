@@ -126,6 +126,6 @@ it('does not offer leftovers from the same date and slot being edited', function
     $component = Livewire::test(Planner::class)
         ->call('openSlot', '2026-05-07', 'dinner');
 
-    $names = collect($component->viewData('availableLeftovers'))->pluck('custom_name')->all();
+    $names = collect($component->instance()->availableLeftovers)->pluck('custom_name')->all();
     expect($names)->toContain('Tomato Soup')->not->toContain('Chuck Roast');
 });

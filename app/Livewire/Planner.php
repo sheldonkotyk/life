@@ -9,6 +9,7 @@ use App\Models\Recipe;
 use App\Models\RecipeIngredient;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -16,6 +17,8 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class Planner extends Component
 {
+    public const SLOTS = ['breakfast', 'lunch', 'dinner'];
+
     public string $weekStart;
 
     #[Url(as: 'mode', except: 'plan')]
@@ -79,6 +82,13 @@ class Planner extends Component
         $this->mode = in_array($mode, ['plan', 'attendance'], true) ? $mode : 'plan';
     }
 
+    public function selectMember(int $memberId): void
+    {
+        if ($this->selectableMembers->contains('id', $memberId)) {
+            $this->memberId = $memberId;
+        }
+    }
+
     public function shiftWeek(int $weeks): void
     {
         $this->weekStart = CarbonImmutable::parse($this->weekStart)->addDays($weeks * 7)->toDateString();
@@ -90,6 +100,80 @@ class Planner extends Component
         $this->weekStart = CarbonImmutable::now(auth()->user()->getTimezone())->toDateString();
         $this->cancelEdit();
     }
+
+    // --- Attendance ---
+
+    public function setAttending(string $date, string $slot, bool $attend): void
+    {
+        if (! in_array($slot, self::SLOTS, true)) {
+            return;
+        }
+        $this->guardMember();
+        $this->applyAttendance([[$date, $slot]], $attend);
+    }
+
+    public function setSlotAttending(string $slot, bool $attend): void
+    {
+        if (! in_array($slot, self::SLOTS, true)) {
+            return;
+        }
+        $this->guardMember();
+
+        $pairs = collect($this->days)->map(fn ($d) => [$d->toDateString(), $slot])->all();
+        $this->applyAttendance($pairs, $attend);
+    }
+
+    public function setDayAttending(string $date, bool $attend): void
+    {
+        $this->guardMember();
+
+        $pairs = array_map(fn ($slot) => [$date, $slot], self::SLOTS);
+        $this->applyAttendance($pairs, $attend);
+    }
+
+    /**
+     * @param  array<int, array{0: string, 1: string}>  $pairs
+     */
+    private function applyAttendance(array $pairs, bool $attend): void
+    {
+        $isGuest = (bool) $this->selectedMember?->is_guest;
+        $shouldHaveRow = $isGuest ? $attend : ! $attend;
+
+        foreach ($pairs as [$date, $slot]) {
+            if ($shouldHaveRow) {
+                FamilyMemberUnavailability::firstOrCreate([
+                    'family_member_id' => $this->memberId,
+                    'date' => $date,
+                    'slot' => $slot,
+                ]);
+            } else {
+                FamilyMemberUnavailability::where('family_member_id', $this->memberId)
+                    ->whereDate('date', $date)->where('slot', $slot)->delete();
+            }
+
+            if (! $attend) {
+                $this->detachExistingMealAttendance($date, $slot);
+            }
+        }
+
+        unset($this->notAttendingKeys);
+    }
+
+    private function guardMember(): void
+    {
+        abort_unless($this->members->contains('id', $this->memberId), 403);
+    }
+
+    private function detachExistingMealAttendance(string $date, string $slot): void
+    {
+        $hh = auth()->user()->household_id;
+        MealPlan::where('household_id', $hh)
+            ->whereDate('date', $date)
+            ->where('slot', $slot)
+            ->each(fn ($plan) => $plan->attendees()->detach($this->memberId));
+    }
+
+    // --- Modal / meal editing ---
 
     public function openSlot(string $date, string $slot, ?int $planId = null): void
     {
@@ -261,45 +345,143 @@ class Planner extends Component
         }
     }
 
-    public function render()
+    // --- Computed properties (used by both islands) ---
+
+    #[Computed]
+    public function start(): CarbonImmutable
     {
-        $hh = auth()->user()->household_id;
-        $start = CarbonImmutable::parse($this->weekStart);
+        return CarbonImmutable::parse($this->weekStart);
+    }
+
+    #[Computed]
+    public function days()
+    {
+        $start = $this->start;
+
+        return collect(range(0, 6))->map(fn ($i) => $start->addDays($i));
+    }
+
+    #[Computed]
+    public function today(): string
+    {
+        return CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
+    }
+
+    #[Computed]
+    public function members()
+    {
+        return FamilyMember::where('household_id', auth()->user()->household_id)
+            ->with('user')
+            ->orderBy('is_guest')
+            ->orderBy('name')
+            ->get();
+    }
+
+    #[Computed]
+    public function selectedMember(): ?FamilyMember
+    {
+        return $this->members->firstWhere('id', $this->memberId);
+    }
+
+    #[Computed]
+    public function selectableMembers()
+    {
+        $user = auth()->user();
+
+        if ($user->isAdminOf($user->household)) {
+            return $this->members;
+        }
+
+        $ownId = $user->familyMember?->id;
+
+        return $this->members->filter(fn ($m) => $m->is_guest || $m->id === $ownId)->values();
+    }
+
+    #[Computed]
+    public function notAttendingKeys(): array
+    {
+        if (! $this->memberId) {
+            return [];
+        }
+
+        $start = $this->start;
+        $isGuest = (bool) $this->selectedMember?->is_guest;
+
+        $overrideKeys = FamilyMemberUnavailability::where('family_member_id', $this->memberId)
+            ->whereBetween('date', [$start->toDateString(), $start->addDays(6)->toDateString()])
+            ->get()
+            ->map(fn ($u) => $u->date->toDateString().'|'.$u->slot)
+            ->all();
+
+        if (! $isGuest) {
+            return $overrideKeys;
+        }
+
+        $allKeys = [];
+        foreach ($this->days as $d) {
+            foreach (self::SLOTS as $slot) {
+                $allKeys[] = $d->toDateString().'|'.$slot;
+            }
+        }
+
+        return array_values(array_diff($allKeys, $overrideKeys));
+    }
+
+    #[Computed]
+    public function plans()
+    {
+        $start = $this->start;
         $end = $start->addDays(6);
 
-        $days = collect(range(0, 6))->map(fn ($i) => $start->addDays($i));
-
-        $plans = MealPlan::where('household_id', $hh)
-            ->whereBetween('date', [$start->startOfDay(), $end->endOfDay()])
+        return MealPlan::where('household_id', auth()->user()->household_id)
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
             ->with('recipe.ingredients', 'attendees.user', 'leftoverSources.recipe.ingredients', 'skippedIngredients')
             ->get()
             ->groupBy(fn ($p) => $p->date->toDateString().'|'.$p->slot);
+    }
 
-        $members = FamilyMember::where('household_id', $hh)->with('user')->orderBy('is_guest')->orderBy('name')->get();
-        $recipes = Recipe::where('household_id', $hh)->orderBy('name')->get();
+    #[Computed]
+    public function defaultAttendees(): array
+    {
+        $start = $this->start;
+        $end = $start->addDays(6);
 
-        $unavailabilities = FamilyMemberUnavailability::whereIn('family_member_id', $members->pluck('id'))
-            ->whereBetween('date', [$start->startOfDay(), $end->endOfDay()])
+        $unavailabilities = FamilyMemberUnavailability::whereIn('family_member_id', $this->members->pluck('id'))
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
             ->get()
             ->groupBy(fn ($u) => $u->date->toDateString().'|'.$u->slot)
             ->map(fn ($group) => $group->pluck('family_member_id')->all());
 
-        $defaultAttendees = [];
-        foreach ($days as $d) {
-            foreach (['breakfast', 'lunch', 'dinner'] as $slot) {
+        $defaults = [];
+        foreach ($this->days as $d) {
+            foreach (self::SLOTS as $slot) {
                 $key = $d->toDateString().'|'.$slot;
                 $rowIds = $unavailabilities->get($key, []);
-                $defaultAttendees[$key] = $members
+                $defaults[$key] = $this->members
                     ->filter(fn ($m) => $m->is_guest ? in_array($m->id, $rowIds) : ! in_array($m->id, $rowIds))
                     ->values();
             }
         }
 
-        // Available leftovers: meals from past 3 days where save_leftovers=true and not yet consumed as leftover
+        return $defaults;
+    }
+
+    #[Computed]
+    public function recipes()
+    {
+        return Recipe::where('household_id', auth()->user()->household_id)->orderBy('name')->get();
+    }
+
+    #[Computed]
+    public function availableLeftovers()
+    {
+        $start = $this->start;
+        $end = $start->addDays(6);
+
         $consumedLeftoverIds = DB::table('meal_plan_leftover_uses')
             ->pluck('source_meal_plan_id')->all();
 
-        $availableLeftovers = MealPlan::where('household_id', $hh)
+        return MealPlan::where('household_id', auth()->user()->household_id)
             ->where('save_leftovers', true)
             ->whereNotIn('id', $consumedLeftoverIds)
             ->whereDate('date', '>=', $start->subDays(3)->toDateString())
@@ -312,19 +494,37 @@ class Planner extends Component
             })
             ->with('recipe')
             ->get();
+    }
 
-        $activeIngredients = collect();
-        $activeRecipeServings = 1;
-        if ($this->editingDate && $this->selectedRecipeId && empty($this->selectedLeftoverIds)) {
-            $activeRecipe = Recipe::where('household_id', $hh)->with('ingredients')->find($this->selectedRecipeId);
-            if ($activeRecipe) {
-                $activeIngredients = $activeRecipe->ingredients;
-                $activeRecipeServings = max(1, (int) $activeRecipe->servings);
-            }
+    #[Computed]
+    public function activeIngredients()
+    {
+        if (! ($this->editingDate && $this->selectedRecipeId && empty($this->selectedLeftoverIds))) {
+            return collect();
         }
 
-        $today = CarbonImmutable::today(auth()->user()->getTimezone())->toDateString();
+        $recipe = Recipe::where('household_id', auth()->user()->household_id)
+            ->with('ingredients')
+            ->find($this->selectedRecipeId);
 
-        return view('livewire.planner', compact('days', 'plans', 'members', 'recipes', 'availableLeftovers', 'start', 'activeIngredients', 'activeRecipeServings', 'today', 'defaultAttendees'));
+        return $recipe?->ingredients ?? collect();
+    }
+
+    #[Computed]
+    public function activeRecipeServings(): int
+    {
+        if (! ($this->editingDate && $this->selectedRecipeId && empty($this->selectedLeftoverIds))) {
+            return 1;
+        }
+
+        $recipe = Recipe::where('household_id', auth()->user()->household_id)
+            ->find($this->selectedRecipeId);
+
+        return max(1, (int) ($recipe?->servings ?? 1));
+    }
+
+    public function render()
+    {
+        return view('livewire.planner');
     }
 }

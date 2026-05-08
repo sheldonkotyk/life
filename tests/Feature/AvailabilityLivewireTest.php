@@ -1,6 +1,5 @@
 <?php
 
-use App\Livewire\Availability;
 use App\Livewire\Planner;
 use App\Models\FamilyMember;
 use App\Models\FamilyMemberUnavailability;
@@ -16,7 +15,7 @@ it('mounts with the user\'s family member', function () {
         'name' => 'Mine',
     ]);
 
-    Livewire::test(Availability::class)->assertSet('memberId', $member->id);
+    Livewire::test(Planner::class)->assertSet('memberId', $member->id);
 });
 
 it('marks a slot as unavailable and detaches from existing meal plans', function () {
@@ -34,7 +33,7 @@ it('marks a slot as unavailable and detaches from existing meal plans', function
     ]);
     $plan->attendees()->sync([$member->id]);
 
-    Livewire::test(Availability::class)
+    Livewire::test(Planner::class)
         ->call('setAttending', $today, 'dinner', false);
 
     expect(FamilyMemberUnavailability::where('family_member_id', $member->id)->count())->toBe(1)
@@ -50,7 +49,7 @@ it('toggles a slot back to attending and removes the unavailability', function (
     ]);
     $today = CarbonImmutable::today()->toDateString();
 
-    Livewire::test(Availability::class)
+    Livewire::test(Planner::class)
         ->call('setAttending', $today, 'lunch', false)
         ->call('setAttending', $today, 'lunch', true);
 
@@ -65,7 +64,7 @@ it('toggles a whole slot across the week back to attending', function () {
         'name' => 'Me',
     ]);
 
-    Livewire::test(Availability::class)
+    Livewire::test(Planner::class)
         ->call('setSlotAttending', 'breakfast', false)
         ->call('setSlotAttending', 'breakfast', true);
 
@@ -81,7 +80,7 @@ it('toggles a whole day back to attending', function () {
     ]);
     $today = CarbonImmutable::today()->toDateString();
 
-    Livewire::test(Availability::class)
+    Livewire::test(Planner::class)
         ->call('setDayAttending', $today, false)
         ->call('setDayAttending', $today, true);
 
@@ -103,7 +102,7 @@ it('ignores unknown slots', function () {
         'name' => 'Me',
     ]);
 
-    Livewire::test(Availability::class)
+    Livewire::test(Planner::class)
         ->call('setAttending', CarbonImmutable::today()->toDateString(), 'brunch', false);
 
     expect(FamilyMemberUnavailability::count())->toBe(0);
@@ -117,7 +116,7 @@ it('marks a whole slot across the week as unavailable', function () {
         'name' => 'Me',
     ]);
 
-    Livewire::test(Availability::class)->call('setSlotAttending', 'breakfast', false);
+    Livewire::test(Planner::class)->call('setSlotAttending', 'breakfast', false);
 
     expect(FamilyMemberUnavailability::where('family_member_id', $member->id)->where('slot', 'breakfast')->count())->toBe(7);
 });
@@ -131,7 +130,7 @@ it('marks a whole day across all slots as unavailable', function () {
     ]);
     $today = CarbonImmutable::today()->toDateString();
 
-    Livewire::test(Availability::class)->call('setDayAttending', $today, false);
+    Livewire::test(Planner::class)->call('setDayAttending', $today, false);
 
     expect(FamilyMemberUnavailability::where('family_member_id', $member->id)->whereDate('date', $today)->count())->toBe(3);
 });

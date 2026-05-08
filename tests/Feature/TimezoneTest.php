@@ -1,11 +1,13 @@
 <?php
 
-use App\Livewire\Availability;
+use App\Livewire\Planner;
 use App\Livewire\ShoppingList;
 use App\Livewire\Tracker;
 use App\Models\Household;
+use App\Models\MealPlan;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Laravel\Sanctum\Sanctum;
 use Livewire\Livewire;
 
 it('User::getTimezone defaults to UTC', function () {
@@ -55,8 +57,8 @@ it('Availability days start on the user\'s local week', function () {
     ]);
     $this->actingAs($user);
 
-    $component = Livewire::test(Availability::class);
-    $first = $component->instance()->days()[0];
+    $component = Livewire::test(Planner::class);
+    $first = $component->instance()->days[0];
 
     // 2026-05-05 03:00 UTC = 2026-05-04 LA (Monday) → startOfWeek = 2026-05-04
     expect($first->toDateString())->toBe('2026-05-04');
@@ -93,10 +95,10 @@ it('MealPlan shopping-list endpoint honours user timezone for default window', f
         'email' => 'u@example.test',
         'timezone' => 'America/Los_Angeles',
     ]);
-    \Laravel\Sanctum\Sanctum::actingAs($user);
+    Sanctum::actingAs($user);
 
     // Plan exists in the LA-local week (starts 2026-04-27) but not in the UTC week (starts 2026-05-04).
-    \App\Models\MealPlan::create([
+    MealPlan::create([
         'household_id' => $h->id,
         'date' => '2026-04-30',
         'slot' => 'dinner',

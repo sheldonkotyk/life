@@ -13,7 +13,7 @@
             <flux:button size="sm" variant="ghost" icon="chevron-left" wire:click="shiftWeek(-1)">Prev</flux:button>
             <flux:button size="sm" wire:click="jumpToToday">Today</flux:button>
             <flux:button size="sm" variant="ghost" icon-trailing="chevron-right" wire:click="shiftWeek(1)">Next</flux:button>
-            <flux:text size="sm" variant="subtle" class="w-full sm:w-auto sm:ml-2">{{ $start->format('M j') }} – {{ $start->addDays(6)->format('M j, Y') }}</flux:text>
+            <flux:text size="sm" variant="subtle" class="w-full sm:w-auto sm:ml-2">{{ $this->start->format('M j') }} – {{ $this->start->addDays(6)->format('M j, Y') }}</flux:text>
         </div>
     </div>
 
@@ -31,161 +31,302 @@
             </button>
         </div>
 
-        @if ($members->count() > 1)
-            <flux:select wire:model.live="memberId" class:input="w-full sm:w-56" x-show="mode === 'attendance'" x-cloak>
-                @foreach ($members as $m)
-                    <flux:select.option value="{{ $m->id }}">
-                        {{ $m->name }}@if ($m->is_guest) (guest)@endif
-                    </flux:select.option>
-                @endforeach
-            </flux:select>
+        @if ($this->selectableMembers->count() > 1)
+            @php $memberMap = $this->selectableMembers->keyBy('id'); @endphp
+            <div x-data="{ selected: @js($memberId) }" x-show="mode === 'attendance'" x-cloak>
+                <flux:dropdown align="end">
+                    <flux:button variant="outline" size="sm" icon-trailing="chevron-down" class="!items-center !gap-2 !pl-2 !pr-3 !pt-3 !pb-2">
+                        @foreach ($memberMap as $id => $m)
+                            <span x-show="selected === {{ $id }}" class="inline-flex items-center gap-2">
+                                <x-avatar :member="$m" size="sm" class="!ring-0 !shadow-none" />
+                                <span class="text-sm font-medium">{{ $m->name }}</span>
+                                @if ($m->is_guest)
+                                    <span class="text-[10px] uppercase tracking-wide text-zinc-500">guest</span>
+                                @endif
+                            </span>
+                        @endforeach
+                    </flux:button>
+                    <flux:menu>
+                        @foreach ($memberMap as $id => $m)
+                            <flux:menu.item
+                                as="button"
+                                wire:click="selectMember({{ $id }})"
+                                wire:island="attendance"
+                                x-on:click="selected = {{ $id }}">
+                                <div class="flex items-center gap-2 w-full">
+                                    <x-avatar :member="$m" size="sm" />
+                                    <span class="flex-1 text-left">{{ $m->name }}</span>
+                                    @if ($m->is_guest)
+                                        <span class="text-[10px] uppercase tracking-wide text-zinc-500">guest</span>
+                                    @endif
+                                    <flux:icon icon="check" variant="micro" x-show="selected === {{ $id }}" class="text-indigo-600" />
+                                </div>
+                            </flux:menu.item>
+                        @endforeach
+                    </flux:menu>
+                </flux:dropdown>
+            </div>
         @endif
     </div>
 
+    {{-- ============ ATTENDANCE ISLAND ============ --}}
     <div x-show="mode === 'attendance'" x-cloak>
-        <livewire:availability :weekStart="$weekStart" :memberId="$memberId" :key="'attendance-'.$weekStart.'-'.$memberId" />
-    </div>
-
-    <div x-show="mode === 'plan'">
-    {{-- Mobile: stacked by day --}}
-    <div class="lg:hidden space-y-3">
-        @foreach ($days as $d)
-            @php $isToday = $d->toDateString() === $today; @endphp
-            <flux:card class="p-0! overflow-hidden">
-                <div class="flex items-baseline justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-700 {{ $isToday ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'bg-zinc-50 dark:bg-zinc-800/50' }}">
-                    <div class="font-semibold {{ $isToday ? 'text-indigo-700 dark:text-indigo-300' : '' }}">{{ $d->format('l') }}</div>
-                    <div class="text-xs text-zinc-500">{{ $d->format('M j') }}</div>
-                </div>
-                <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    @foreach (['breakfast', 'lunch', 'dinner'] as $slot)
-                        @php
-                            $key = $d->toDateString() . '|' . $slot;
-                            $cellPlans = $plans->get($key, collect());
-                        @endphp
-                        <div class="px-3 py-2">
-                            <div class="text-[10px] uppercase tracking-wide text-zinc-500 font-medium mb-1.5">{{ $slot }}</div>
-                            @foreach ($cellPlans as $plan)
+    @island(name: 'attendance', always: true)
+        <div class="space-y-4">
+            {{-- Mobile: stacked by day --}}
+            <div class="lg:hidden space-y-3">
+                @foreach ($this->days as $d)
+                    @php
+                        $dateStr = $d->toDateString();
+                        $isToday = $dateStr === $this->today;
+                        $allIn = collect(\App\Livewire\Planner::SLOTS)
+                            ->every(fn ($s) => ! in_array($dateStr.'|'.$s, $this->notAttendingKeys));
+                    @endphp
+                    <flux:card class="p-0! overflow-hidden" wire:key="att-day-{{ $dateStr }}-{{ $this->memberId }}">
+                        <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-700 {{ $isToday ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'bg-zinc-50 dark:bg-zinc-800/50' }}">
+                            <div>
+                                <div class="font-semibold {{ $isToday ? 'text-indigo-700 dark:text-indigo-300' : '' }}">{{ $d->format('l') }}</div>
+                                <div class="text-xs text-zinc-500">{{ $d->format('M j') }}</div>
+                            </div>
+                            <flux:button size="xs" variant="ghost"
+                                wire:click="setDayAttending('{{ $dateStr }}', {{ $allIn ? 'false' : 'true' }})"
+                                wire:island="attendance">
+                                {{ $allIn ? 'Skip day' : 'All in' }}
+                            </flux:button>
+                        </div>
+                        <div class="grid grid-cols-3 divide-x divide-zinc-100 dark:divide-zinc-800">
+                            @foreach (\App\Livewire\Planner::SLOTS as $slot)
+                                @php $attending = ! in_array($dateStr.'|'.$slot, $this->notAttendingKeys); @endphp
                                 <button
-                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}', {{ $plan->id }})"
-                                    class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1">
-                                    <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100 break-words">{{ $plan->displayName() }}</div>
-                                    @php $mp = $plan->macrosPerServing(); @endphp
-                                    @if ($mp['calories'] > 0)
-                                        <div class="text-[11px] text-zinc-500 mt-0.5">{{ round($mp['calories']) }} kcal · P{{ $mp['protein_g'] }} C{{ $mp['carbs_g'] }} F{{ $mp['fat_g'] }}</div>
-                                    @endif
-                                    <div class="flex flex-wrap gap-0.5 mt-1 items-center">
-                                        @foreach ($plan->confirmedAttendees() as $a)
-                                            <x-avatar :member="$a" size="xs" />
-                                        @endforeach
-                                        @if ($plan->save_leftovers)
-                                            <span class="ml-auto text-[11px] text-amber-600">🥡{{ $plan->leftover_servings }}</span>
-                                        @endif
-                                    </div>
+                                    type="button"
+                                    wire:click="setAttending('{{ $dateStr }}', '{{ $slot }}', {{ $attending ? 'false' : 'true' }})"
+                                    wire:island="attendance"
+                                    class="py-3 px-2 text-center capitalize text-sm transition {{ $attending ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 font-medium' : 'text-zinc-400 dark:text-zinc-500' }}">
+                                    <div class="text-lg leading-none mb-1">{{ $attending ? '✓' : '–' }}</div>
+                                    {{ $slot }}
                                 </button>
                             @endforeach
-                            @if ($cellPlans->isEmpty())
-                                <button
-                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                    class="w-full text-left text-base font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-3 px-3 rounded-md">
-                                    <div>+ add</div>
-                                    @php $defaults = $defaultAttendees[$key] ?? collect(); @endphp
-                                    @if ($defaults->isNotEmpty())
-                                        <div class="flex flex-wrap gap-0.5 mt-1">
-                                            @foreach ($defaults as $a)
-                                                <x-avatar :member="$a" size="xs" />
-                                            @endforeach
-                                        </div>
-                                    @endif
-                                </button>
-                            @else
-                                <button
-                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                    class="w-full text-base font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2.5 rounded-md mt-1">
-                                    + add
-                                </button>
-                            @endif
                         </div>
-                    @endforeach
-                </div>
-            </flux:card>
-        @endforeach
+                    </flux:card>
+                @endforeach
+            </div>
+
+            {{-- Desktop: weekly grid --}}
+            <div class="hidden lg:block">
+                <flux:card class="overflow-x-auto p-0!">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
+                                <th class="text-left p-3 font-semibold text-zinc-600 w-32">Day</th>
+                                @foreach (\App\Livewire\Planner::SLOTS as $slot)
+                                    @php
+                                        $allSlotIn = collect($this->days)->every(
+                                            fn ($d) => ! in_array($d->toDateString().'|'.$slot, $this->notAttendingKeys)
+                                        );
+                                    @endphp
+                                    <th class="text-center p-3 font-semibold text-zinc-600 dark:text-zinc-300 capitalize">
+                                        <div>{{ $slot }}</div>
+                                        <flux:button size="xs" class="mt-1" variant="ghost"
+                                            wire:click="setSlotAttending('{{ $slot }}', {{ $allSlotIn ? 'false' : 'true' }})"
+                                            wire:island="attendance">
+                                            {{ $allSlotIn ? 'Skip all' : 'All in' }}
+                                        </flux:button>
+                                    </th>
+                                @endforeach
+                                <th class="text-right p-3 font-semibold text-zinc-500 w-24">All day</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($this->days as $d)
+                                @php
+                                    $dateStr = $d->toDateString();
+                                    $isToday = $dateStr === $this->today;
+                                    $allIn = collect(\App\Livewire\Planner::SLOTS)
+                                        ->every(fn ($s) => ! in_array($dateStr.'|'.$s, $this->notAttendingKeys));
+                                @endphp
+                                <tr class="border-b border-zinc-100 dark:border-zinc-800 last:border-b-0 {{ $isToday ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : '' }}">
+                                    <td class="p-3">
+                                        <div class="font-semibold {{ $isToday ? 'text-indigo-700 dark:text-indigo-300' : '' }}">{{ $d->format('D') }}</div>
+                                        <div class="text-xs text-zinc-400">{{ $d->format('M j') }}</div>
+                                    </td>
+                                    @foreach (\App\Livewire\Planner::SLOTS as $slot)
+                                        @php $attending = ! in_array($dateStr.'|'.$slot, $this->notAttendingKeys); @endphp
+                                        <td class="p-3 text-center">
+                                            <label class="inline-flex items-center justify-center cursor-pointer">
+                                                <flux:checkbox
+                                                    wire:key="att-cell-{{ $dateStr }}-{{ $slot }}-{{ $attending ? '1' : '0' }}"
+                                                    :checked="$attending"
+                                                    wire:click="setAttending('{{ $dateStr }}', '{{ $slot }}', {{ $attending ? 'false' : 'true' }})"
+                                                    wire:island="attendance"
+                                                />
+                                            </label>
+                                        </td>
+                                    @endforeach
+                                    <td class="p-3 text-right">
+                                        <flux:button size="xs" variant="ghost"
+                                            wire:click="setDayAttending('{{ $dateStr }}', {{ $allIn ? 'false' : 'true' }})"
+                                            wire:island="attendance">
+                                            {{ $allIn ? 'Skip' : 'All in' }}
+                                        </flux:button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </flux:card>
+            </div>
+
+            <flux:text size="xs" variant="subtle">
+                Unchecked meals will exclude you from the meal plan automatically.
+            </flux:text>
+        </div>
+    @endisland
     </div>
 
-    {{-- Desktop: weekly grid --}}
-    <div class="hidden lg:block">
-    <flux:card class="overflow-x-auto p-0!">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
-                    <th class="text-left p-2 font-semibold text-zinc-600 w-24"></th>
-                    @foreach ($days as $d)
-                        @php $isToday = $d->toDateString() === $today; @endphp
-                        <th class="text-left p-2 font-semibold {{ $isToday ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-zinc-600 dark:text-zinc-300' }}">
-                            <div>{{ $d->format('D') }}</div>
-                            <div class="text-xs font-normal text-zinc-400">{{ $d->format('M j') }}</div>
-                        </th>
-                    @endforeach
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (['breakfast', 'lunch', 'dinner'] as $slot)
-                    <tr class="border-b border-zinc-100 dark:border-zinc-800 last:border-b-0">
-                        <td class="p-2 align-top text-zinc-500 font-medium uppercase tracking-wide text-xs pt-3 capitalize">{{ $slot }}</td>
-                        @foreach ($days as $d)
-                            @php
-                                $key = $d->toDateString() . '|' . $slot;
-                                $cellPlans = $plans->get($key, collect());
-                            @endphp
-                            <td class="p-1.5 align-top min-w-[140px]">
-                                @foreach ($cellPlans as $plan)
-                                    <button
-                                        wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}', {{ $plan->id }})"
-                                        class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1">
-                                        <div class="text-xs font-semibold text-zinc-800 dark:text-zinc-100 break-words">{{ $plan->displayName() }}</div>
-                                        @php $mp = $plan->macrosPerServing(); @endphp
-                                        @if ($mp['calories'] > 0)
-                                            <div class="text-[10px] text-zinc-500 mt-0.5">{{ round($mp['calories']) }} kcal · P{{ $mp['protein_g'] }} C{{ $mp['carbs_g'] }} F{{ $mp['fat_g'] }}</div>
-                                        @endif
-                                        <div class="flex flex-wrap gap-0.5 mt-1 items-center">
-                                            @foreach ($plan->confirmedAttendees() as $a)
-                                                <x-avatar :member="$a" size="xs" />
-                                            @endforeach
-                                            @if ($plan->save_leftovers)
-                                                <span class="ml-auto text-[10px] text-amber-600">🥡{{ $plan->leftover_servings }}</span>
+    {{-- ============ PLAN ISLAND ============ --}}
+    <div x-show="mode === 'plan'">
+    @island(name: 'plan', always: true)
+        <div class="space-y-3 lg:space-y-0">
+            {{-- Mobile: stacked by day --}}
+            <div class="lg:hidden space-y-3">
+                @foreach ($this->days as $d)
+                    @php $isToday = $d->toDateString() === $this->today; @endphp
+                    <flux:card class="p-0! overflow-hidden">
+                        <div class="flex items-baseline justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-700 {{ $isToday ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'bg-zinc-50 dark:bg-zinc-800/50' }}">
+                            <div class="font-semibold {{ $isToday ? 'text-indigo-700 dark:text-indigo-300' : '' }}">{{ $d->format('l') }}</div>
+                            <div class="text-xs text-zinc-500">{{ $d->format('M j') }}</div>
+                        </div>
+                        <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                            @foreach (['breakfast', 'lunch', 'dinner'] as $slot)
+                                @php
+                                    $key = $d->toDateString().'|'.$slot;
+                                    $cellPlans = $this->plans->get($key, collect());
+                                @endphp
+                                <div class="px-3 py-2">
+                                    <div class="text-[10px] uppercase tracking-wide text-zinc-500 font-medium mb-1.5">{{ $slot }}</div>
+                                    @foreach ($cellPlans as $plan)
+                                        <button
+                                            wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}', {{ $plan->id }})"
+                                            class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1">
+                                            <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100 break-words">{{ $plan->displayName() }}</div>
+                                            @php $mp = $plan->macrosPerServing(); @endphp
+                                            @if ($mp['calories'] > 0)
+                                                <div class="text-[11px] text-zinc-500 mt-0.5">{{ round($mp['calories']) }} kcal · P{{ $mp['protein_g'] }} C{{ $mp['carbs_g'] }} F{{ $mp['fat_g'] }}</div>
                                             @endif
-                                        </div>
-                                    </button>
-                                @endforeach
-                                @if ($cellPlans->isEmpty())
-                                    <button
-                                        wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                        class="w-full text-left text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2.5 px-2 rounded-md">
-                                        <div>+ add</div>
-                                        @php $defaults = $defaultAttendees[$key] ?? collect(); @endphp
-                                        @if ($defaults->isNotEmpty())
-                                            <div class="flex flex-wrap gap-0.5 mt-1">
-                                                @foreach ($defaults as $a)
+                                            <div class="flex flex-wrap gap-0.5 mt-1 items-center">
+                                                @foreach ($plan->confirmedAttendees() as $a)
                                                     <x-avatar :member="$a" size="xs" />
                                                 @endforeach
+                                                @if ($plan->save_leftovers)
+                                                    <span class="ml-auto text-[11px] text-amber-600">🥡{{ $plan->leftover_servings }}</span>
+                                                @endif
                                             </div>
-                                        @endif
-                                    </button>
-                                @else
-                                    <button
-                                        wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
-                                        class="w-full text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2 rounded-md mt-1">
-                                        + add
-                                    </button>
-                                @endif
-                            </td>
-                        @endforeach
-                    </tr>
+                                        </button>
+                                    @endforeach
+                                    @if ($cellPlans->isEmpty())
+                                        <button
+                                            wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
+                                            class="w-full text-left text-base font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-3 px-3 rounded-md">
+                                            <div>+ add</div>
+                                            @php $defaults = $this->defaultAttendees[$key] ?? collect(); @endphp
+                                            @if ($defaults->isNotEmpty())
+                                                <div class="flex flex-wrap gap-0.5 mt-1">
+                                                    @foreach ($defaults as $a)
+                                                        <x-avatar :member="$a" size="xs" />
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                        </button>
+                                    @else
+                                        <button
+                                            wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
+                                            class="w-full text-base font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2.5 rounded-md mt-1">
+                                            + add
+                                        </button>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </flux:card>
                 @endforeach
-            </tbody>
-        </table>
-    </flux:card>
-    </div>
+            </div>
 
+            {{-- Desktop: weekly grid --}}
+            <div class="hidden lg:block">
+                <flux:card class="overflow-x-auto p-0!">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
+                                <th class="text-left p-2 font-semibold text-zinc-600 w-24"></th>
+                                @foreach ($this->days as $d)
+                                    @php $isToday = $d->toDateString() === $this->today; @endphp
+                                    <th class="text-left p-2 font-semibold {{ $isToday ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-zinc-600 dark:text-zinc-300' }}">
+                                        <div>{{ $d->format('D') }}</div>
+                                        <div class="text-xs font-normal text-zinc-400">{{ $d->format('M j') }}</div>
+                                    </th>
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (['breakfast', 'lunch', 'dinner'] as $slot)
+                                <tr class="border-b border-zinc-100 dark:border-zinc-800 last:border-b-0">
+                                    <td class="p-2 align-top text-zinc-500 font-medium uppercase tracking-wide text-xs pt-3 capitalize">{{ $slot }}</td>
+                                    @foreach ($this->days as $d)
+                                        @php
+                                            $key = $d->toDateString().'|'.$slot;
+                                            $cellPlans = $this->plans->get($key, collect());
+                                        @endphp
+                                        <td class="p-1.5 align-top min-w-[140px]">
+                                            @foreach ($cellPlans as $plan)
+                                                <button
+                                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}', {{ $plan->id }})"
+                                                    class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1">
+                                                    <div class="text-xs font-semibold text-zinc-800 dark:text-zinc-100 break-words">{{ $plan->displayName() }}</div>
+                                                    @php $mp = $plan->macrosPerServing(); @endphp
+                                                    @if ($mp['calories'] > 0)
+                                                        <div class="text-[10px] text-zinc-500 mt-0.5">{{ round($mp['calories']) }} kcal · P{{ $mp['protein_g'] }} C{{ $mp['carbs_g'] }} F{{ $mp['fat_g'] }}</div>
+                                                    @endif
+                                                    <div class="flex flex-wrap gap-0.5 mt-1 items-center">
+                                                        @foreach ($plan->confirmedAttendees() as $a)
+                                                            <x-avatar :member="$a" size="xs" />
+                                                        @endforeach
+                                                        @if ($plan->save_leftovers)
+                                                            <span class="ml-auto text-[10px] text-amber-600">🥡{{ $plan->leftover_servings }}</span>
+                                                        @endif
+                                                    </div>
+                                                </button>
+                                            @endforeach
+                                            @if ($cellPlans->isEmpty())
+                                                <button
+                                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
+                                                    class="w-full text-left text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2.5 px-2 rounded-md">
+                                                    <div>+ add</div>
+                                                    @php $defaults = $this->defaultAttendees[$key] ?? collect(); @endphp
+                                                    @if ($defaults->isNotEmpty())
+                                                        <div class="flex flex-wrap gap-0.5 mt-1">
+                                                            @foreach ($defaults as $a)
+                                                                <x-avatar :member="$a" size="xs" />
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+                                                </button>
+                                            @else
+                                                <button
+                                                    wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
+                                                    class="w-full text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2 rounded-md mt-1">
+                                                    + add
+                                                </button>
+                                            @endif
+                                        </td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </flux:card>
+            </div>
+        </div>
+    @endisland
     </div>
 
     {{-- Edit modal --}}
@@ -197,8 +338,8 @@
                     <flux:text size="sm" variant="subtle">{{ \Carbon\Carbon::parse($editingDate)->format('l, M j') }}</flux:text>
                 </div>
 
-                @if ($availableLeftovers->isNotEmpty() && ! $editingPlanId)
-                    @php $allLeftoverIds = $availableLeftovers->pluck('id')->all(); @endphp
+                @if ($this->availableLeftovers->isNotEmpty() && ! $editingPlanId)
+                    @php $allLeftoverIds = $this->availableLeftovers->pluck('id')->all(); @endphp
                     <div>
                         <div class="flex items-baseline justify-between mb-2">
                             <flux:text size="xs" variant="subtle" class="uppercase tracking-wide">Use leftovers</flux:text>
@@ -212,7 +353,7 @@
                             </div>
                         </div>
                         <div class="space-y-1">
-                            @foreach ($availableLeftovers as $lo)
+                            @foreach ($this->availableLeftovers as $lo)
                                 @php $checked = in_array($lo->id, $selectedLeftoverIds); @endphp
                                 <button type="button" wire:click="toggleLeftover({{ $lo->id }})"
                                         class="w-full text-left p-2 rounded-md border {{ $checked ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800' }}">
@@ -228,7 +369,7 @@
                     <flux:label>Recipe</flux:label>
                     <flux:select wire:model.live="selectedRecipeId" wire:change="clearLeftovers">
                         <flux:select.option value="">— None / custom —</flux:select.option>
-                        @foreach ($recipes as $r)
+                        @foreach ($this->recipes as $r)
                             <flux:select.option value="{{ $r->id }}">{{ $r->name }}@if ($r->makes_leftovers) (leftovers) @endif</flux:select.option>
                         @endforeach
                     </flux:select>
@@ -243,19 +384,19 @@
                     </div>
                 </flux:field>
 
-                @if ($activeIngredients->isNotEmpty())
+                @if ($this->activeIngredients->isNotEmpty())
                     @php
                         $totals = ['calories' => 0, 'protein_g' => 0, 'carbs_g' => 0, 'fat_g' => 0];
-                        foreach ($activeIngredients as $ing) {
+                        foreach ($this->activeIngredients as $ing) {
                             if (in_array($ing->id, $skippedIngredientIds)) continue;
                             foreach ($totals as $k => $_) $totals[$k] += (float) ($ing->{$k} ?? 0);
                         }
-                        foreach ($totals as $k => $v) $totals[$k] = round($v / $activeRecipeServings, 1);
+                        foreach ($totals as $k => $v) $totals[$k] = round($v / $this->activeRecipeServings, 1);
                     @endphp
                     <div>
                         <flux:text size="xs" variant="subtle" class="uppercase tracking-wide mb-2 block">Ingredients (check to skip)</flux:text>
                         <div class="space-y-1 bg-zinc-50 dark:bg-zinc-800 rounded-md p-2 border border-zinc-200 dark:border-zinc-700">
-                            @foreach ($activeIngredients as $ing)
+                            @foreach ($this->activeIngredients as $ing)
                                 <label class="flex items-center gap-2 px-1 py-0.5 hover:bg-white dark:hover:bg-zinc-700 rounded cursor-pointer text-sm">
                                     <flux:checkbox wire:model.live="skippedIngredientIds" value="{{ $ing->id }}" />
                                     <span class="flex-1 {{ in_array($ing->id, $skippedIngredientIds) ? 'line-through text-zinc-400' : '' }}">
@@ -291,9 +432,9 @@
 
                 <div>
                     <flux:text size="xs" variant="subtle" class="uppercase tracking-wide mb-2 block">Who's eating?</flux:text>
-                    @php $hasGuests = $members->contains('is_guest', true); $guestDividerShown = false; @endphp
+                    @php $hasGuests = $this->members->contains('is_guest', true); $guestDividerShown = false; @endphp
                     <div class="grid grid-cols-1 gap-1">
-                        @foreach ($members as $m)
+                        @foreach ($this->members as $m)
                             @if ($m->is_guest && ! $guestDividerShown)
                                 @php $guestDividerShown = true; @endphp
                                 <div class="flex items-center gap-2 mt-2 mb-1">
