@@ -175,12 +175,9 @@
                             @foreach ($availableLeftovers as $lo)
                                 @php $checked = in_array($lo->id, $selectedLeftoverIds); @endphp
                                 <button type="button" wire:click="toggleLeftover({{ $lo->id }})"
-                                        class="w-full text-left p-2 rounded-md border flex items-start gap-2 {{ $checked ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800' }}">
-                                    <flux:checkbox :checked="$checked" class="mt-0.5 pointer-events-none" />
-                                    <div class="flex-1">
-                                        <div class="text-sm font-medium">🥡 {{ $lo->recipe?->name ?? $lo->custom_name }}</div>
-                                        <flux:text size="xs" variant="subtle">{{ $lo->date->format('D, M j') }} · {{ $lo->leftover_servings }} servings</flux:text>
-                                    </div>
+                                        class="w-full text-left p-2 rounded-md border {{ $checked ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800' }}">
+                                    <div class="text-sm font-medium">🥡 {{ $lo->recipe?->name ?? $lo->custom_name }}</div>
+                                    <flux:text size="xs" variant="subtle">{{ $lo->date->format('D, M j') }} · {{ $lo->leftover_servings }} servings</flux:text>
                                 </button>
                             @endforeach
                         </div>
