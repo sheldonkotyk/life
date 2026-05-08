@@ -39,15 +39,7 @@
                 </form>
             </flux:card>
 
-            <flux:card>
-                <flux:heading size="lg">Default meal times</flux:heading>
-                <flux:text size="sm" variant="subtle" class="mb-3">
-                    When each meal usually happens. Used as the starting point for meal planning.
-                </flux:text>
-                <flux:button variant="ghost" :href="route('household.meals')" wire:navigate>
-                    Edit meal times →
-                </flux:button>
-            </flux:card>
+            <livewire:household-meal-times />
 
             <flux:card>
                 <flux:heading size="lg">Join another household</flux:heading>
