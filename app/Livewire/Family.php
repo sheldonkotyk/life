@@ -10,6 +10,10 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class Family extends Component
 {
+    public const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+    public const SLOTS = ['breakfast', 'lunch', 'dinner'];
+
     public ?int $editingId = null;
 
     public string $name = '';
@@ -182,6 +186,70 @@ class Family extends Component
         $this->prefFood = '';
         $this->prefType = 'like';
         $this->prefNotes = '';
+    }
+
+    public function canEditAttendance(?FamilyMember $member): bool
+    {
+        if (! $member) {
+            return false;
+        }
+
+        $user = auth()->user();
+
+        if ($user->canManageHousehold($user->household)) {
+            return true;
+        }
+
+        return $member->user_id === $user->id;
+    }
+
+    public function getEditingMemberProperty(): ?FamilyMember
+    {
+        if (! $this->editingId) {
+            return null;
+        }
+
+        return $this->householdMembers()->find($this->editingId);
+    }
+
+    public function toggleAttendance(string $day, string $slot): void
+    {
+        $member = $this->editingMember;
+        abort_unless($member && $this->canEditAttendance($member), 403);
+
+        if (! in_array($day, self::DAYS, true) || ! in_array($slot, self::SLOTS, true)) {
+            return;
+        }
+
+        $member->setDefaultAttendance($day, $slot, ! $member->attendsByDefault($day, $slot));
+    }
+
+    public function setDayAttendance(string $day, bool $value): void
+    {
+        $member = $this->editingMember;
+        abort_unless($member && $this->canEditAttendance($member), 403);
+
+        if (! in_array($day, self::DAYS, true)) {
+            return;
+        }
+
+        foreach (self::SLOTS as $slot) {
+            $member->setDefaultAttendance($day, $slot, $value);
+        }
+    }
+
+    public function setSlotAttendance(string $slot, bool $value): void
+    {
+        $member = $this->editingMember;
+        abort_unless($member && $this->canEditAttendance($member), 403);
+
+        if (! in_array($slot, self::SLOTS, true)) {
+            return;
+        }
+
+        foreach (self::DAYS as $day) {
+            $member->setDefaultAttendance($day, $slot, $value);
+        }
     }
 
     private function householdMembers()

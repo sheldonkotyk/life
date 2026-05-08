@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\HouseholdSettings;
+use App\Livewire\HouseholdMealTimes;
 use App\Models\Household;
 use App\Models\MealPlan;
 use App\Models\User;
@@ -17,14 +17,14 @@ it('admin can save default meal times', function () {
     $user = loginUser();
     $user->households()->updateExistingPivot($user->household_id, ['role' => 'admin']);
 
-    Livewire::test(HouseholdSettings::class)
+    Livewire::test(HouseholdMealTimes::class)
         ->set('breakfastStart', '08:00')
         ->set('breakfastEnd', '09:30')
         ->set('lunchStart', '12:00')
         ->set('lunchEnd', '13:00')
         ->set('dinnerStart', '18:00')
         ->set('dinnerEnd', '20:00')
-        ->call('saveMealTimes')
+        ->call('save')
         ->assertHasNoErrors();
 
     $hh = $user->household->fresh();
@@ -36,10 +36,10 @@ it('rejects end time before start time', function () {
     $user = loginUser();
     $user->households()->updateExistingPivot($user->household_id, ['role' => 'admin']);
 
-    Livewire::test(HouseholdSettings::class)
+    Livewire::test(HouseholdMealTimes::class)
         ->set('breakfastStart', '09:00')
         ->set('breakfastEnd', '08:00')
-        ->call('saveMealTimes')
+        ->call('save')
         ->assertHasErrors(['breakfastEnd']);
 });
 
@@ -50,9 +50,9 @@ it('non-admin cannot save meal times', function () {
 
     loginUser($household);
 
-    Livewire::test(HouseholdSettings::class)
+    Livewire::test(HouseholdMealTimes::class)
         ->set('breakfastStart', '06:00')
-        ->call('saveMealTimes');
+        ->call('save');
 
     expect(substr($household->fresh()->breakfast_start_time, 0, 5))->toBe('07:00');
 });

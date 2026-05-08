@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TimezoneController;
 use App\Livewire\Availability;
 use App\Livewire\Family;
+use App\Livewire\HouseholdMealTimes;
 use App\Livewire\HouseholdSettings;
 use App\Livewire\Planner;
 use App\Livewire\Profile;
@@ -44,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/availability', Availability::class);
     Route::get('/profile', Profile::class)->name('profile');
     Route::get('/household', HouseholdSettings::class)->name('household');
+    Route::get('/household/meals', HouseholdMealTimes::class)->name('household.meals');
     Route::post('/household/switch/{household}', [AuthController::class, 'switchHousehold'])->name('household.switch');
     Route::post('/me/timezone', [TimezoneController::class, 'detect']);
 });

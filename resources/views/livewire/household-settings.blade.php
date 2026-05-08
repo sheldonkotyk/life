@@ -58,6 +58,16 @@
         </div>
     </flux:card>
 
+    <flux:card>
+        <flux:heading size="lg">Default meal times</flux:heading>
+        <flux:text size="sm" variant="subtle" class="mb-3">
+            When each meal usually happens. Used as the starting point for meal planning.
+        </flux:text>
+        <flux:button variant="ghost" :href="route('household.meals')" wire:navigate>
+            Edit meal times →
+        </flux:button>
+    </flux:card>
+
     @php $isSoleMember = $members->count() === 1; @endphp
     <flux:card>
         <flux:heading size="lg">Leave household</flux:heading>
@@ -126,114 +136,6 @@
             <flux:button type="submit" variant="primary">Join</flux:button>
         </form>
     </flux:card>
-
-    <flux:card>
-        <flux:heading size="lg">Default meal times</flux:heading>
-        <flux:text size="sm" variant="subtle" class="mb-3">
-            When each meal usually happens. Times are interpreted in your timezone ({{ auth()->user()->getTimezone() }}). Individual meals can override these.
-        </flux:text>
-
-        <form wire:submit="saveMealTimes" class="space-y-3">
-            @foreach ([
-                ['label' => 'Breakfast', 'start' => 'breakfastStart', 'end' => 'breakfastEnd'],
-                ['label' => 'Lunch', 'start' => 'lunchStart', 'end' => 'lunchEnd'],
-                ['label' => 'Dinner', 'start' => 'dinnerStart', 'end' => 'dinnerEnd'],
-            ] as $row)
-                <div class="grid grid-cols-1 sm:grid-cols-[8rem_1fr_1fr] gap-2 items-end">
-                    <flux:text class="font-semibold">{{ $row['label'] }}</flux:text>
-                    <flux:input type="time" wire:model="{{ $row['start'] }}" label="Start" :readonly="! $this->canManage" />
-                    <flux:input type="time" wire:model="{{ $row['end'] }}" label="End" :readonly="! $this->canManage" />
-                </div>
-            @endforeach
-
-            @error('breakfastEnd') <flux:text size="sm" class="text-red-600">{{ $message }}</flux:text> @enderror
-            @error('lunchEnd') <flux:text size="sm" class="text-red-600">{{ $message }}</flux:text> @enderror
-            @error('dinnerEnd') <flux:text size="sm" class="text-red-600">{{ $message }}</flux:text> @enderror
-
-            @if ($this->canManage)
-                <flux:button type="submit" variant="primary">Save meal times</flux:button>
-            @endif
-        </form>
-    </flux:card>
-
-    @if ($attendanceMember)
-        @php
-            $dayLabels = ['sun' => 'Sun', 'mon' => 'Mon', 'tue' => 'Tue', 'wed' => 'Wed', 'thu' => 'Thu', 'fri' => 'Fri', 'sat' => 'Sat'];
-            $slots = \App\Livewire\HouseholdSettings::SLOTS;
-        @endphp
-        <flux:card>
-            <div class="flex flex-wrap gap-3 items-baseline justify-between mb-3">
-                <div>
-                    <flux:heading size="lg">Default weekly attendance</flux:heading>
-                    <flux:text size="sm" variant="subtle">
-                        Set the meals each person is typically there for. Used as the starting point for meal planning.
-                    </flux:text>
-                </div>
-
-                @if ($attendanceMembers->count() > 1)
-                    <flux:select wire:model.live="attendanceMemberId" class:input="w-full sm:w-56">
-                        @foreach ($attendanceMembers as $m)
-                            <flux:select.option value="{{ $m->id }}">
-                                {{ $m->name }}@if ($m->is_guest) (guest)@endif
-                            </flux:select.option>
-                        @endforeach
-                    </flux:select>
-                @endif
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
-                            <th class="text-left p-3 font-semibold text-zinc-600 dark:text-zinc-300 w-32">Day</th>
-                            @foreach ($slots as $slot)
-                                @php
-                                    $allSlotIn = collect(\App\Livewire\HouseholdSettings::DAYS)
-                                        ->every(fn ($d) => $attendanceMember->attendsByDefault($d, $slot));
-                                @endphp
-                                <th class="text-center p-3 font-semibold text-zinc-600 dark:text-zinc-300 capitalize">
-                                    <div>{{ $slot }}</div>
-                                    <flux:button size="xs" class="mt-1" variant="ghost"
-                                        wire:click="setSlotAttendance('{{ $slot }}', {{ $allSlotIn ? 'false' : 'true' }})">
-                                        {{ $allSlotIn ? 'Skip all' : 'All in' }}
-                                    </flux:button>
-                                </th>
-                            @endforeach
-                            <th class="text-right p-3 font-semibold text-zinc-500 w-24">All day</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($dayLabels as $dayKey => $dayLabel)
-                            @php
-                                $allIn = collect($slots)->every(fn ($s) => $attendanceMember->attendsByDefault($dayKey, $s));
-                            @endphp
-                            <tr class="border-b border-zinc-100 dark:border-zinc-800 last:border-b-0">
-                                <td class="p-3 font-semibold">{{ $dayLabel }}</td>
-                                @foreach ($slots as $slot)
-                                    @php $attending = $attendanceMember->attendsByDefault($dayKey, $slot); @endphp
-                                    <td class="p-3 text-center">
-                                        <label class="inline-flex items-center justify-center cursor-pointer">
-                                            <flux:checkbox
-                                                wire:key="default-{{ $attendanceMember->id }}-{{ $dayKey }}-{{ $slot }}-{{ $attending ? '1' : '0' }}"
-                                                :checked="$attending"
-                                                wire:click="toggleAttendance('{{ $dayKey }}', '{{ $slot }}')"
-                                            />
-                                        </label>
-                                    </td>
-                                @endforeach
-                                <td class="p-3 text-right">
-                                    <flux:button size="xs" variant="ghost"
-                                        wire:click="setDayAttendance('{{ $dayKey }}', {{ $allIn ? 'false' : 'true' }})">
-                                        {{ $allIn ? 'Skip' : 'All in' }}
-                                    </flux:button>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </flux:card>
-    @endif
 
     <flux:card>
         <flux:heading size="lg" class="mb-3">Members</flux:heading>

@@ -96,6 +96,82 @@
                 </flux:button>
             </div>
         </form>
+
+        @if ($editingId && ($attendanceMember = $this->editingMember))
+            @php
+                $canEditAttendance = $this->canEditAttendance($attendanceMember);
+                $dayLabels = ['sun' => 'Sun', 'mon' => 'Mon', 'tue' => 'Tue', 'wed' => 'Wed', 'thu' => 'Thu', 'fri' => 'Fri', 'sat' => 'Sat'];
+                $slots = \App\Livewire\Family::SLOTS;
+            @endphp
+            <div class="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-700">
+                <flux:subheading>Default weekly attendance</flux:subheading>
+                <flux:text size="sm" variant="subtle" class="mt-1 mb-3">
+                    Meals {{ $attendanceMember->name }} is typically there for. Used as the starting point for meal planning.
+                    @unless ($canEditAttendance)
+                        Only admins or {{ $attendanceMember->name }} can edit this.
+                    @endunless
+                </flux:text>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
+                                <th class="text-left p-2 font-semibold text-zinc-600 dark:text-zinc-300 w-20">Day</th>
+                                @foreach ($slots as $slot)
+                                    @php
+                                        $allSlotIn = collect(\App\Livewire\Family::DAYS)
+                                            ->every(fn ($d) => $attendanceMember->attendsByDefault($d, $slot));
+                                    @endphp
+                                    <th class="text-center p-2 font-semibold text-zinc-600 dark:text-zinc-300 capitalize">
+                                        <div>{{ $slot }}</div>
+                                        @if ($canEditAttendance)
+                                            <flux:button size="xs" class="mt-1" variant="ghost"
+                                                wire:click="setSlotAttendance('{{ $slot }}', {{ $allSlotIn ? 'false' : 'true' }})">
+                                                {{ $allSlotIn ? 'Skip all' : 'All in' }}
+                                            </flux:button>
+                                        @endif
+                                    </th>
+                                @endforeach
+                                @if ($canEditAttendance)
+                                    <th class="text-right p-2 font-semibold text-zinc-500 w-20">All day</th>
+                                @endif
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($dayLabels as $dayKey => $dayLabel)
+                                @php
+                                    $allIn = collect($slots)->every(fn ($s) => $attendanceMember->attendsByDefault($dayKey, $s));
+                                @endphp
+                                <tr class="border-b border-zinc-100 dark:border-zinc-800 last:border-b-0">
+                                    <td class="p-2 font-semibold">{{ $dayLabel }}</td>
+                                    @foreach ($slots as $slot)
+                                        @php $attending = $attendanceMember->attendsByDefault($dayKey, $slot); @endphp
+                                        <td class="p-2 text-center">
+                                            <label class="inline-flex items-center justify-center {{ $canEditAttendance ? 'cursor-pointer' : '' }}">
+                                                <flux:checkbox
+                                                    wire:key="default-{{ $attendanceMember->id }}-{{ $dayKey }}-{{ $slot }}-{{ $attending ? '1' : '0' }}"
+                                                    :checked="$attending"
+                                                    :disabled="! $canEditAttendance"
+                                                    wire:click="toggleAttendance('{{ $dayKey }}', '{{ $slot }}')"
+                                                />
+                                            </label>
+                                        </td>
+                                    @endforeach
+                                    @if ($canEditAttendance)
+                                        <td class="p-2 text-right">
+                                            <flux:button size="xs" variant="ghost"
+                                                wire:click="setDayAttendance('{{ $dayKey }}', {{ $allIn ? 'false' : 'true' }})">
+                                                {{ $allIn ? 'Skip' : 'All in' }}
+                                            </flux:button>
+                                        </td>
+                                    @endif
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
     </flux:modal>
 
     {{-- Member cards --}}
