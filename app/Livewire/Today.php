@@ -10,7 +10,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-class Tonight extends Component
+class Today extends Component
 {
     public const STATUSES = ['eating', 'running_late', 'not_eating'];
 
@@ -125,7 +125,7 @@ class Tonight extends Component
             ->orderBy('date', 'desc')
             ->get();
 
-        return view('livewire.tonight', compact(
+        return view('livewire.today', compact(
             'meals',
             'members',
             'myMember',

@@ -23,7 +23,7 @@
             $currentUser = auth()->user();
             $userHouseholds = $currentUser->households()->orderBy('name')->get();
             $navItems = [
-                'tonight' => ['label' => 'Tonight', 'icon' => 'moon'],
+                'today' => ['label' => 'Today', 'icon' => 'sun'],
                 'plan' => ['label' => 'Plan', 'icon' => 'calendar-days'],
                 'availability' => ['label' => 'Attendance', 'icon' => 'user-group'],
                 'recipes' => ['label' => 'Recipes', 'icon' => 'book-open'],
@@ -34,7 +34,7 @@
 
         <flux:sidebar stashable sticky class="lg:hidden bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700">
             <flux:sidebar.header>
-                <flux:sidebar.brand href="{{ url('/tonight') }}" name="Life" />
+                <flux:sidebar.brand href="{{ url('/today') }}" name="Life" />
             </flux:sidebar.header>
 
             <flux:navlist>
@@ -79,7 +79,7 @@
         <flux:header sticky class="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-4 lg:px-8">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
-            <flux:brand href="{{ url('/tonight') }}" name="Life" class="!me-6" />
+            <flux:brand href="{{ url('/today') }}" name="Life" class="!me-6" />
 
             <flux:navbar class="-mb-px hidden lg:flex">
                 @foreach ($navItems as $path => $item)

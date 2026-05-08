@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\Tonight;
+use App\Livewire\Today;
 use App\Models\FamilyMember;
 use App\Models\MealPlan;
 use App\Models\Recipe;
@@ -27,7 +27,7 @@ function tonightDinner(int $householdId, int $servings = 4, ?int $prep = 30): Me
 it('renders tonight dashboard with no plan', function () {
     loginUser();
 
-    Livewire::test(Tonight::class)
+    Livewire::test(Today::class)
         ->assertSee('Nothing planned today');
 });
 
@@ -38,7 +38,7 @@ it('shows tonight dinner with confirmed count', function () {
     $sam = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'Sam']);
     $plan->attendees()->attach([$alex->id => ['status' => 'eating'], $sam->id => ['status' => 'eating']]);
 
-    Livewire::test(Tonight::class)
+    Livewire::test(Today::class)
         ->assertSee('Stir Fry')
         ->assertSee('2 confirmed');
 });
@@ -52,7 +52,7 @@ it('lets the logged-in user mark themselves running late', function () {
         'name' => 'Me',
     ]);
 
-    Livewire::test(Tonight::class)
+    Livewire::test(Today::class)
         ->call('setMyStatus', $plan->id, 'running_late');
 
     expect($plan->attendees()->where('family_members.id', $me->id)->first()?->pivot->status)
@@ -69,7 +69,7 @@ it('counts running-late attendees as confirmed', function () {
         $sam->id => ['status' => 'running_late'],
     ]);
 
-    Livewire::test(Tonight::class)
+    Livewire::test(Today::class)
         ->assertSee('2 confirmed')
         ->assertSee('1 running late');
 });
@@ -83,7 +83,7 @@ it('rejects unknown attendance statuses', function () {
         'name' => 'Me',
     ]);
 
-    Livewire::test(Tonight::class)
+    Livewire::test(Today::class)
         ->call('setMyStatus', $plan->id, 'teleporting');
 
     expect($plan->attendees()->count())->toBe(0);
@@ -101,7 +101,7 @@ it('shows leftover reminder for unconsumed save_leftovers in past 3 days', funct
         'leftover_servings' => 2,
     ]);
 
-    Livewire::test(Tonight::class)
+    Livewire::test(Today::class)
         ->assertSee('Use it up')
         ->assertSee('Chili');
 });

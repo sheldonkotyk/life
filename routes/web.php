@@ -11,12 +11,12 @@ use App\Livewire\Profile;
 use App\Livewire\RecipeBrowser;
 use App\Livewire\Recipes;
 use App\Livewire\ShoppingList;
-use App\Livewire\Tonight;
+use App\Livewire\Today;
 use App\Livewire\Tracker;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return auth()->check() ? redirect('/tonight') : view('landing');
+    return auth()->check() ? redirect('/today') : view('landing');
 })->name('home');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -34,7 +34,8 @@ Route::post('/dev-login/{user}', [AuthController::class, 'devLogin']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
 Route::middleware('auth')->group(function () {
-    Route::get('/tonight', Tonight::class)->name('tonight');
+    Route::get('/today', Today::class)->name('today');
+    Route::redirect('/tonight', '/today');
     Route::get('/plan', Planner::class)->name('plan');
     Route::redirect('/family', '/household');
     Route::get('/recipes', Recipes::class);
