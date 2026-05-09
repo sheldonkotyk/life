@@ -196,3 +196,98 @@ it('skips an entire slot column with the column Skip all button', function () {
         ->where('slot', 'breakfast')
         ->count())->toBe(7); // every day in the week
 });
+
+it('renders the desktop matrix with day columns and slot rows', function () {
+    [$user] = setupPlannerHousehold();
+    MealPlan::create([
+        'household_id' => $user->household_id,
+        'date' => '2026-05-08',
+        'slot' => 'dinner',
+        'custom_name' => 'Pizza',
+    ]);
+
+    $page = visit('/meal-plan')->assertNoJavaScriptErrors();
+
+    $stats = $page->script(<<<'JS'
+        (() => {
+            const dropCells = Array.from(document.querySelectorAll('td'))
+                .filter(e => e.hasAttribute('@drop'));
+            const table = dropCells[0]?.closest('table');
+            return {
+                cells: dropCells.length,
+                dayHeaders: table ? table.querySelectorAll('thead th:not(:first-child)').length : 0,
+                slotRows: table ? table.querySelectorAll('tbody tr').length : 0,
+                draggables: document.querySelectorAll('[draggable="true"]').length,
+            };
+        })()
+    JS);
+
+    expect($stats['cells'])->toBe(21)
+        ->and($stats['dayHeaders'])->toBe(7)
+        ->and($stats['slotRows'])->toBe(3)
+        ->and($stats['draggables'])->toBeGreaterThan(0);
+});
+
+it('moves a meal plan to another day/slot via simulated drag-and-drop', function () {
+    [$user] = setupPlannerHousehold();
+    $plan = MealPlan::create([
+        'household_id' => $user->household_id,
+        'date' => '2026-05-08',
+        'slot' => 'lunch',
+        'custom_name' => 'Tacos',
+    ]);
+
+    $page = visit('/meal-plan')->assertSee('Tacos')->assertNoJavaScriptErrors();
+
+    // Simulate native HTML5 drag-and-drop from lunch on May 8 to dinner on May 10.
+    $page->script(<<<JS
+        (() => {
+            const card = Array.from(document.querySelectorAll('[draggable="true"]'))
+                .find(b => (b.getAttribute('wire:click') || '').includes("'2026-05-08', 'lunch', {$plan->id}"));
+            const cells = Array.from(document.querySelectorAll('*')).filter(e => e.hasAttribute('@drop'));
+            const target = cells.find(c => (c.getAttribute('@drop') || '').includes("'2026-05-10', 'dinner'"));
+            const dt = new DataTransfer();
+            card.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
+            target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }));
+            target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+            card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
+        })()
+    JS);
+
+    $page->waitForText('Tacos');
+
+    $plan->refresh();
+    expect($plan->date->toDateString())->toBe('2026-05-10')
+        ->and($plan->slot)->toBe('dinner');
+});
+
+it('moves a meal plan from one slot to another on the same day', function () {
+    [$user] = setupPlannerHousehold();
+    $plan = MealPlan::create([
+        'household_id' => $user->household_id,
+        'date' => '2026-05-09',
+        'slot' => 'breakfast',
+        'custom_name' => 'Oatmeal',
+    ]);
+
+    $page = visit('/meal-plan')->assertSee('Oatmeal')->assertNoJavaScriptErrors();
+
+    $page->script(<<<JS
+        (() => {
+            const card = Array.from(document.querySelectorAll('[draggable="true"]'))
+                .find(b => (b.getAttribute('wire:click') || '').includes("'2026-05-09', 'breakfast', {$plan->id}"));
+            const cells = Array.from(document.querySelectorAll('*')).filter(e => e.hasAttribute('@drop'));
+            const target = cells.find(c => (c.getAttribute('@drop') || '').includes("'2026-05-09', 'dinner'"));
+            const dt = new DataTransfer();
+            card.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
+            target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }));
+            target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        })()
+    JS);
+
+    $page->waitForText('Oatmeal');
+
+    $plan->refresh();
+    expect($plan->date->toDateString())->toBe('2026-05-09')
+        ->and($plan->slot)->toBe('dinner');
+});

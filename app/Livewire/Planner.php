@@ -334,6 +334,33 @@ class Planner extends Component
         $this->cancelEdit();
     }
 
+    public function movePlan(int $planId, string $date, string $slot): void
+    {
+        if (! in_array($slot, self::SLOTS, true)) {
+            return;
+        }
+
+        try {
+            $parsedDate = CarbonImmutable::parse($date)->toDateString();
+        } catch (\Throwable) {
+            return;
+        }
+
+        $hh = auth()->user()->household_id;
+        $plan = MealPlan::where('household_id', $hh)->findOrFail($planId);
+
+        if ($plan->date->toDateString() === $parsedDate && $plan->slot === $slot) {
+            return;
+        }
+
+        $plan->update([
+            'date' => $parsedDate,
+            'slot' => $slot,
+            'start_time' => null,
+            'end_time' => null,
+        ]);
+    }
+
     public function quickToggleAttendee(int $planId, int $memberId): void
     {
         $hh = auth()->user()->household_id;

@@ -186,7 +186,28 @@
     {{-- ============ PLAN ISLAND ============ --}}
     <div x-show="mode === 'plan'">
     @island(name: 'plan', always: true)
-        <div class="space-y-3 lg:space-y-0">
+        <div
+            class="space-y-3 lg:space-y-0"
+            x-data="{
+                draggingId: null,
+                dragOver: null,
+                onDragStart(e, id) {
+                    this.draggingId = id;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(id));
+                },
+                onDragEnd() { this.draggingId = null; this.dragOver = null; },
+                onDragOver(e, key) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; this.dragOver = key; },
+                onDragLeave(key) { if (this.dragOver === key) this.dragOver = null; },
+                onDrop(e, date, slot) {
+                    e.preventDefault();
+                    const id = parseInt(e.dataTransfer.getData('text/plain') || this.draggingId);
+                    this.dragOver = null;
+                    this.draggingId = null;
+                    if (!id) return;
+                    $wire.movePlan(id, date, slot);
+                },
+            }">
             {{-- Mobile: stacked by day --}}
             <div class="lg:hidden space-y-3">
                 @foreach ($this->days as $d)
@@ -202,12 +223,20 @@
                                     $key = $d->toDateString().'|'.$slot;
                                     $cellPlans = $this->plans->get($key, collect());
                                 @endphp
-                                <div class="px-3 py-2">
+                                <div class="px-3 py-2"
+                                    @dragover="onDragOver($event, '{{ $key }}')"
+                                    @dragleave="onDragLeave('{{ $key }}')"
+                                    @drop="onDrop($event, '{{ $d->toDateString() }}', '{{ $slot }}')"
+                                    x-bind:class="dragOver === '{{ $key }}' ? 'bg-indigo-50 dark:bg-indigo-900/30 ring-2 ring-indigo-400 ring-inset' : ''">
                                     <div class="text-[10px] uppercase tracking-wide text-zinc-500 font-medium mb-1.5">{{ $slot }}</div>
                                     @foreach ($cellPlans as $plan)
                                         <button
                                             wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}', {{ $plan->id }})"
-                                            class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1">
+                                            draggable="true"
+                                            @dragstart="onDragStart($event, {{ $plan->id }})"
+                                            @dragend="onDragEnd()"
+                                            x-bind:class="draggingId === {{ $plan->id }} ? 'opacity-40' : ''"
+                                            class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1 cursor-grab active:cursor-grabbing">
                                             <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100 break-words">{{ $plan->displayName() }}</div>
                                             @php $mp = $plan->macrosPerServing(); @endphp
                                             @if ($mp['calories'] > 0)
@@ -251,7 +280,7 @@
                 @endforeach
             </div>
 
-            {{-- Desktop: weekly grid --}}
+            {{-- Desktop: weekly matrix (slots as rows, days as columns) --}}
             <div class="hidden lg:block">
                 <flux:card class="overflow-x-auto p-0!">
                     <table class="w-full text-sm">
@@ -276,11 +305,20 @@
                                             $key = $d->toDateString().'|'.$slot;
                                             $cellPlans = $this->plans->get($key, collect());
                                         @endphp
-                                        <td class="p-1.5 align-top min-w-[140px]">
+                                        <td class="p-1.5 align-top min-w-[140px] rounded-md"
+                                            @dragover="onDragOver($event, '{{ $key }}')"
+                                            @dragleave="onDragLeave('{{ $key }}')"
+                                            @drop="onDrop($event, '{{ $d->toDateString() }}', '{{ $slot }}')"
+                                            x-bind:class="dragOver === '{{ $key }}' ? 'bg-indigo-100/70 dark:bg-indigo-900/30 ring-2 ring-indigo-400 ring-inset' : ''">
                                             @foreach ($cellPlans as $plan)
                                                 <button
+                                                    wire:key="plan-card-{{ $plan->id }}"
                                                     wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}', {{ $plan->id }})"
-                                                    class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1">
+                                                    draggable="true"
+                                                    @dragstart="onDragStart($event, {{ $plan->id }})"
+                                                    @dragend="onDragEnd()"
+                                                    x-bind:class="draggingId === {{ $plan->id }} ? 'opacity-40' : ''"
+                                                    class="w-full text-left bg-zinc-50 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md p-2 mb-1 cursor-grab active:cursor-grabbing">
                                                     <div class="text-xs font-semibold text-zinc-800 dark:text-zinc-100 break-words">{{ $plan->displayName() }}</div>
                                                     @php $mp = $plan->macrosPerServing(); @endphp
                                                     @if ($mp['calories'] > 0)
@@ -298,6 +336,7 @@
                                             @endforeach
                                             @if ($cellPlans->isEmpty())
                                                 <button
+                                                    type="button"
                                                     wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
                                                     class="w-full text-left text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2.5 px-2 rounded-md">
                                                     <div>+ add</div>
@@ -312,6 +351,7 @@
                                                 </button>
                                             @else
                                                 <button
+                                                    type="button"
                                                     wire:click="openSlot('{{ $d->toDateString() }}', '{{ $slot }}')"
                                                     class="w-full text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-dashed border-zinc-300 dark:border-zinc-700 py-2 rounded-md mt-1">
                                                     + add

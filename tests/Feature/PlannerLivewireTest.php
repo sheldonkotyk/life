@@ -3,9 +3,11 @@
 use App\Livewire\Planner;
 use App\Models\FamilyMember;
 use App\Models\FamilyMemberUnavailability;
+use App\Models\Household;
 use App\Models\MealPlan;
 use App\Models\Recipe;
 use App\Models\RecipeIngredient;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 
 function makeRecipeWith(int $householdId, array $ingredients, int $servings = 4): Recipe
@@ -153,4 +155,58 @@ it('does not create a recipe when newRecipeName is blank', function () {
         ->call('createRecipeFromName');
 
     expect(Recipe::where('household_id', $user->household_id)->count())->toBe(0);
+});
+
+it('moves a meal plan to a new date and slot via movePlan', function () {
+    $user = loginUser();
+    $plan = MealPlan::create([
+        'household_id' => $user->household_id,
+        'date' => '2026-05-04',
+        'slot' => 'dinner',
+        'custom_name' => 'Tacos',
+        'start_time' => '18:00',
+        'end_time' => '19:00',
+    ]);
+
+    Livewire::test(Planner::class)
+        ->call('movePlan', $plan->id, '2026-05-06', 'lunch');
+
+    $plan->refresh();
+    expect($plan->date->toDateString())->toBe('2026-05-06')
+        ->and($plan->slot)->toBe('lunch')
+        ->and($plan->start_time)->toBeNull()
+        ->and($plan->end_time)->toBeNull();
+});
+
+it('movePlan ignores invalid slot', function () {
+    $user = loginUser();
+    $plan = MealPlan::create([
+        'household_id' => $user->household_id,
+        'date' => '2026-05-04',
+        'slot' => 'dinner',
+        'custom_name' => 'Tacos',
+    ]);
+
+    Livewire::test(Planner::class)
+        ->call('movePlan', $plan->id, '2026-05-06', 'midnight-snack');
+
+    $plan->refresh();
+    expect($plan->slot)->toBe('dinner')
+        ->and($plan->date->toDateString())->toBe('2026-05-04');
+});
+
+it('movePlan refuses to move plans from a different household', function () {
+    loginUser();
+    $otherHousehold = Household::create(['name' => 'Other']);
+    $plan = MealPlan::create([
+        'household_id' => $otherHousehold->id,
+        'date' => '2026-05-04',
+        'slot' => 'dinner',
+        'custom_name' => 'Foreign',
+    ]);
+
+    expect(fn () => Livewire::test(Planner::class)->call('movePlan', $plan->id, '2026-05-05', 'lunch'))
+        ->toThrow(ModelNotFoundException::class);
+
+    expect($plan->fresh()->date->toDateString())->toBe('2026-05-04');
 });
