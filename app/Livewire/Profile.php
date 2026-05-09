@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\Household;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -19,6 +20,8 @@ class Profile extends Component
     public ?string $birthday = null;
 
     public $avatar = null;
+
+    public string $joinCode = '';
 
     public function mount(): void
     {
@@ -56,6 +59,36 @@ class Profile extends Component
 
         $user->update(['avatar' => $this->avatar->store('avatars', 'public')]);
         $this->avatar = null;
+    }
+
+    public function joinHousehold(): void
+    {
+        $this->validate([
+            'joinCode' => ['required', 'string', 'max:12'],
+        ]);
+
+        $code = strtoupper(trim($this->joinCode));
+        $household = Household::where('invite_code', $code)->first();
+
+        if (! $household) {
+            $this->addError('joinCode', 'No household found for that code.');
+
+            return;
+        }
+
+        $user = auth()->user();
+
+        if ($user->household_id === $household->id) {
+            $this->addError('joinCode', 'You are already in that household.');
+
+            return;
+        }
+
+        $user->joinHousehold($household);
+
+        $this->joinCode = '';
+        session()->flash('status', 'You joined '.$household->name.'.');
+        $this->redirectRoute('household', navigate: true);
     }
 
     public function removeAvatar(): void

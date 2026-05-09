@@ -1,5 +1,5 @@
-<div class="max-w-xl mx-auto py-8">
-    <flux:heading size="xl" class="mb-6">Profile</flux:heading>
+<div class="max-w-xl mx-auto py-8 space-y-6">
+    <flux:heading size="xl">Profile</flux:heading>
 
     <flux:card>
         <form wire:submit="save" class="space-y-4">
@@ -49,6 +49,22 @@
             <div class="flex justify-end">
                 <flux:button type="submit" variant="primary">Save</flux:button>
             </div>
+        </form>
+    </flux:card>
+
+    <flux:card>
+        <flux:heading size="lg">Join another household</flux:heading>
+        <flux:text size="sm" variant="subtle" class="mb-3">
+            Enter an invite code to switch to a different household.
+        </flux:text>
+        <form wire:submit="joinHousehold" class="flex items-start gap-2">
+            <flux:input
+                wire:model="joinCode"
+                placeholder="INVITE CODE"
+                class="font-mono uppercase"
+                maxlength="12"
+            />
+            <flux:button type="submit" variant="primary">Join</flux:button>
         </form>
     </flux:card>
 </div>

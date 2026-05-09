@@ -4,6 +4,8 @@ use App\Livewire\Today;
 use App\Models\FamilyMember;
 use App\Models\MealPlan;
 use App\Models\Recipe;
+use App\Models\TodoItem;
+use App\Models\TodoList;
 use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 
@@ -104,4 +106,33 @@ it('shows leftover reminder for unconsumed save_leftovers in past 3 days', funct
     Livewire::test(Today::class)
         ->assertSee('Use it up')
         ->assertSee('Chili');
+});
+
+it('shows todos due today and overdue, and toggles them', function () {
+    $user = loginUser();
+    $list = TodoList::create(['household_id' => $user->household_id, 'name' => 'Chores']);
+    $today = TodoItem::create(['todo_list_id' => $list->id, 'title' => 'Today task', 'due_date' => CarbonImmutable::today()->toDateString()]);
+    $overdue = TodoItem::create(['todo_list_id' => $list->id, 'title' => 'Past task', 'due_date' => CarbonImmutable::today()->subDays(2)->toDateString()]);
+    TodoItem::create(['todo_list_id' => $list->id, 'title' => 'Future task', 'due_date' => CarbonImmutable::today()->addDays(3)->toDateString()]);
+
+    Livewire::test(Today::class)
+        ->assertSee('Today task')
+        ->assertSee('Past task')
+        ->assertDontSee('Future task')
+        ->call('toggleTodo', $today->id);
+
+    expect($today->fresh()->completed_at)->not->toBeNull();
+});
+
+it('shows undated todos assigned to me', function () {
+    $user = loginUser();
+    $member = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'Me', 'user_id' => $user->id]);
+    $list = TodoList::create(['household_id' => $user->household_id, 'name' => 'Mine']);
+    $mine = TodoItem::create(['todo_list_id' => $list->id, 'title' => 'Assigned to me']);
+    $mine->assignees()->sync([$member->id]);
+    TodoItem::create(['todo_list_id' => $list->id, 'title' => 'Unassigned and undated']);
+
+    Livewire::test(Today::class)
+        ->assertSee('Assigned to me')
+        ->assertDontSee('Unassigned and undated');
 });

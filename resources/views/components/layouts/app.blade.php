@@ -27,6 +27,7 @@
                 'meal-plan' => ['label' => 'Meal Plan', 'icon' => 'calendar-days'],
                 'recipes' => ['label' => 'Recipes', 'icon' => 'book-open'],
                 'shopping' => ['label' => 'Shopping', 'icon' => 'shopping-cart'],
+                'lists' => ['label' => 'Lists', 'icon' => 'check-circle'],
                 'tracker' => ['label' => 'Tracker', 'icon' => 'chart-bar'],
             ];
         @endphp

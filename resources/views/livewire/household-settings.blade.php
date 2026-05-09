@@ -40,22 +40,6 @@
             </flux:card>
 
             <livewire:household-meal-times />
-
-            <flux:card>
-                <flux:heading size="lg">Join another household</flux:heading>
-                <flux:text size="sm" variant="subtle" class="mb-3">
-                    Enter an invite code to switch to a different household.
-                </flux:text>
-                <form wire:submit="joinHousehold" class="flex items-start gap-2">
-                    <flux:input
-                        wire:model="joinCode"
-                        placeholder="INVITE CODE"
-                        class="font-mono uppercase"
-                        maxlength="12"
-                    />
-                    <flux:button type="submit" variant="primary">Join</flux:button>
-                </form>
-            </flux:card>
         </flux:tab.panel>
 
         <flux:tab.panel name="danger">

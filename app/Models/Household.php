@@ -46,4 +46,9 @@ class Household extends Model
     {
         return $this->hasMany(MealPlan::class);
     }
+
+    public function todoLists(): HasMany
+    {
+        return $this->hasMany(TodoList::class)->orderBy('position')->orderBy('id');
+    }
 }

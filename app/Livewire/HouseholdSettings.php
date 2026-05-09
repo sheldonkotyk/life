@@ -18,8 +18,6 @@ class HouseholdSettings extends Component
 
     public string $inviteCode = '';
 
-    public string $joinCode = '';
-
     public bool $choosingSuccessor = false;
 
     public ?int $successorId = null;
@@ -63,41 +61,6 @@ class HouseholdSettings extends Component
         $this->household()->update(['invite_code' => $code]);
         $this->inviteCode = $code;
         session()->flash('status', 'Invite code regenerated.');
-    }
-
-    public function joinHousehold(): void
-    {
-        $this->validate([
-            'joinCode' => ['required', 'string', 'max:12'],
-        ]);
-
-        $code = strtoupper(trim($this->joinCode));
-        $household = Household::where('invite_code', $code)->first();
-
-        if (! $household) {
-            $this->addError('joinCode', 'No household found for that code.');
-
-            return;
-        }
-
-        $user = auth()->user();
-
-        if ($user->households()->where('households.id', $household->id)->exists()
-            && $user->household_id === $household->id) {
-            $this->addError('joinCode', 'You are already in that household.');
-
-            return;
-        }
-
-        $user->joinHousehold($household);
-
-        $this->joinCode = '';
-        $this->householdId = $household->id;
-        $this->name = $household->name;
-        $this->inviteCode = $household->invite_code;
-
-        session()->flash('status', 'You joined '.$household->name.'.');
-        $this->redirectRoute('household', navigate: true);
     }
 
     public function leaveHousehold(): void

@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\FamilyMember;
 use App\Models\MealPlan;
+use App\Models\TodoItem;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -45,6 +46,31 @@ class Today extends Component
         $member = FamilyMember::where('household_id', $hh)->findOrFail($memberId);
 
         $plan->attendees()->syncWithoutDetaching([$member->id => ['status' => $status]]);
+    }
+
+    public function toggleTodo(int $itemId): void
+    {
+        $hh = auth()->user()->household_id;
+        $item = TodoItem::with('list')->findOrFail($itemId);
+        if (! $item->list || $item->list->household_id !== $hh) {
+            abort(403);
+        }
+
+        if ($item->completed_at) {
+            $item->update(['completed_at' => null, 'completed_by_family_member_id' => null]);
+
+            return;
+        }
+
+        $member = auth()->user()->familyMember;
+        $item->update([
+            'completed_at' => CarbonImmutable::now(),
+            'completed_by_family_member_id' => $member?->id,
+        ]);
+
+        if ($item->isRecurring()) {
+            $item->spawnNextOccurrence();
+        }
     }
 
     public function render()
@@ -125,6 +151,22 @@ class Today extends Component
             ->orderBy('date', 'desc')
             ->get();
 
+        $todayDate = $today->toDateString();
+        $todoQuery = TodoItem::query()
+            ->whereHas('list', fn ($q) => $q->where('household_id', $hh))
+            ->whereNull('completed_at')
+            ->where(function ($q) use ($todayDate, $myMember) {
+                $q->whereDate('due_date', '<=', $todayDate);
+                if ($myMember) {
+                    $q->orWhereHas('assignees', fn ($a) => $a->where('family_members.id', $myMember->id));
+                }
+            })
+            ->with(['list', 'assignees'])
+            ->orderByRaw('due_date IS NULL, due_date ASC')
+            ->orderBy('id');
+
+        $todos = $todoQuery->get();
+
         return view('livewire.today', compact(
             'meals',
             'members',
@@ -132,6 +174,7 @@ class Today extends Component
             'unplannedSlots',
             'leftovers',
             'today',
+            'todos',
         ));
     }
 }

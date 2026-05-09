@@ -4,6 +4,7 @@ use App\Http\Controllers\AppleNotificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TimezoneController;
 use App\Livewire\HouseholdSettings;
+use App\Livewire\Lists;
 use App\Livewire\Planner;
 use App\Livewire\Profile;
 use App\Livewire\RecipeBrowser;
@@ -41,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/recipes/browse', RecipeBrowser::class)->name('recipes.browse');
     Route::get('/shopping', ShoppingList::class);
     Route::get('/tracker', Tracker::class);
+    Route::get('/lists', Lists::class)->name('lists');
     Route::redirect('/availability', '/meal-plan?mode=attendance');
     Route::get('/profile', Profile::class)->name('profile');
     Route::get('/household', HouseholdSettings::class)->name('household');

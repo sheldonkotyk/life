@@ -164,6 +164,47 @@
         @endif
     @endif
 
+    @if ($todos->isNotEmpty())
+        <flux:card>
+            <div class="flex items-center justify-between mb-3">
+                <flux:heading size="md">To-do today</flux:heading>
+                <flux:button size="xs" variant="ghost" :href="url('/lists')" icon-trailing="arrow-right">All lists</flux:button>
+            </div>
+            <ul class="space-y-2">
+                @foreach ($todos as $t)
+                    @php
+                        $isOverdue = $t->due_date && $t->due_date->isPast() && ! $t->due_date->isToday();
+                        $isToday = $t->due_date && $t->due_date->isToday();
+                    @endphp
+                    <li class="flex items-start gap-3">
+                        <button type="button" wire:click="toggleTodo({{ $t->id }})"
+                            class="mt-0.5 size-5 shrink-0 rounded border-2 flex items-center justify-center
+                            border-zinc-300 dark:border-zinc-600 hover:border-emerald-500"></button>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-sm font-medium">{{ $t->title }}</span>
+                                <flux:badge size="sm" :color="$t->list->color ?: 'zinc'">{{ $t->list->name }}</flux:badge>
+                                @if ($isOverdue)
+                                    <flux:badge size="sm" color="red" icon="exclamation-triangle">Overdue</flux:badge>
+                                @elseif ($isToday)
+                                    <flux:badge size="sm" color="amber" icon="calendar">Today</flux:badge>
+                                @endif
+                                @if ($t->isRecurring())
+                                    <flux:badge size="sm" color="indigo" icon="arrow-path" />
+                                @endif
+                            </div>
+                            @if ($t->assignees->isNotEmpty())
+                                <div class="mt-1 text-xs text-zinc-500">
+                                    {{ $t->assignees->pluck('name')->join(', ') }}
+                                </div>
+                            @endif
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        </flux:card>
+    @endif
+
     @if ($leftovers->isNotEmpty())
         <flux:card>
             <div class="flex items-start gap-3">
