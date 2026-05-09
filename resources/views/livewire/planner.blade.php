@@ -1,4 +1,3 @@
-{{-- DEBUG-MARKER:planner-v2-dragdrop mtime={{ @filemtime(resource_path('views/livewire/planner.blade.php')) }} --}}
 <div class="space-y-6"
     x-data="{ mode: @js($mode) }"
     x-init="$watch('mode', v => { if ($wire.mode !== v) $wire.set('mode', v) })">
