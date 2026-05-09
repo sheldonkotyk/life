@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Life — A home for everything your family is up to</title>
-    <meta name="description" content="Plan meals, track attendance, share recipes, and keep your household in sync — all in one calm, family-friendly app.">
+    <meta name="description" content="Plan meals, manage shared to-do lists, track who's home for dinner, share recipes, and keep your household in sync — all in one calm, family-friendly app.">
     <script>
         (function () {
             try {
@@ -43,6 +43,7 @@
         <nav class="hidden sm:flex items-center gap-6 text-sm text-zinc-600 dark:text-zinc-400">
             <a href="#features" class="hover:text-zinc-900 dark:hover:text-zinc-100">Features</a>
             <a href="#devices" class="hover:text-zinc-900 dark:hover:text-zinc-100">On every device</a>
+            <a href="#pricing" class="hover:text-zinc-900 dark:hover:text-zinc-100">Pricing</a>
             <a href="#start" class="hover:text-zinc-900 dark:hover:text-zinc-100">Get started</a>
         </nav>
         <div class="flex items-center gap-2">
@@ -73,7 +74,7 @@
                 A home for everything <br class="hidden sm:block">your family is up to.
             </h1>
             <p class="mt-5 text-lg sm:text-xl text-zinc-600 dark:text-zinc-400 max-w-xl">
-                Plan meals together, track who's home for dinner, share recipes, build a smart shopping list, and keep an eye on goals — all in one calm place the whole household can use.
+                Plan meals together, share to-do lists, track who's home for dinner, save recipes, build a smart shopping list, and keep an eye on goals — all in one calm place the whole household can use.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
                 <a href="{{ route('login') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm">
@@ -108,39 +109,39 @@
             @php
                 $features = [
                     [
-                        'title' => 'Weekly meal planner',
-                        'body'  => 'Drop breakfast, lunch, and dinner into a clean weekly grid. Attach recipes, see calories and macros at a glance, and save leftovers for later.',
+                        'title' => 'Drag-and-drop meal planner',
+                        'body'  => 'Drop breakfast, lunch, and dinner into a clean weekly grid — or drag a meal to a new day to reshuffle the week in seconds.',
                         'icon'  => 'calendar',
                         'tint'  => 'indigo',
                     ],
                     [
-                        'title' => 'Meal attendance',
-                        'body'  => 'Each family member checks which meals they\'ll be home for — so the cook knows exactly how many to plan for.',
+                        'title' => 'Today at a glance',
+                        'body'  => 'A simple daily view shows what\'s for breakfast, lunch, and dinner, who\'s eating, and the day\'s to-dos — perfect for the fridge tablet.',
                         'icon'  => 'check',
                         'tint'  => 'emerald',
                     ],
                     [
-                        'title' => 'Family profiles',
-                        'body'  => 'Names, colors, birthdays, dietary notes, and optional daily macro targets for each person — adults and kids alike.',
-                        'icon'  => 'users',
+                        'title' => 'Shared to-do lists',
+                        'body'  => 'Create color-coded household lists for chores, errands, or the kids. Assign items to family members, set due dates, and repeat tasks daily, weekly, or monthly.',
+                        'icon'  => 'list',
                         'tint'  => 'rose',
                     ],
                     [
-                        'title' => 'Recipes',
-                        'body'  => 'Save your own recipes or browse a shared catalog. Search, scale servings, and pull recipes straight into the planner.',
-                        'icon'  => 'book',
+                        'title' => 'Attendance & availability',
+                        'body'  => 'Each member checks which meals they\'ll be home for, marks late nights, or skips a day entirely — so the cook plans for exactly the right number.',
+                        'icon'  => 'users',
                         'tint'  => 'amber',
                     ],
                     [
-                        'title' => 'Smart shopping list',
-                        'body'  => 'Generate a shopping list from your week\'s plan. Tick things off together, even from different phones.',
-                        'icon'  => 'cart',
+                        'title' => 'Recipes & leftovers',
+                        'body'  => 'Save your own recipes or browse a shared catalog. Pull recipes straight into the planner, and reuse leftovers across multiple meals so nothing goes to waste.',
+                        'icon'  => 'book',
                         'tint'  => 'sky',
                     ],
                     [
-                        'title' => 'Daily tracker',
-                        'body'  => 'A gentle daily log of calories and macros, lined up against each member\'s targets. No guilt, just clarity.',
-                        'icon'  => 'chart',
+                        'title' => 'Shopping list & tracker',
+                        'body'  => 'Auto-build a shopping list from the week\'s plan and tick items off together. A gentle daily tracker keeps calories and macros lined up with each person\'s targets.',
+                        'icon'  => 'cart',
                         'tint'  => 'violet',
                     ],
                 ];
@@ -208,6 +209,75 @@
                 </div>
             </div>
         </div>
+    </div>
+</section>
+
+{{-- ─── Pricing ──────────────────────────────────────────────── --}}
+<section id="pricing" class="py-20 sm:py-28 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl mx-auto text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Simple, household-wide pricing.</h2>
+            <p class="mt-4 text-lg text-zinc-600 dark:text-zinc-400">One subscription covers everyone in your household. No per-seat fees, no surprises.</p>
+        </div>
+
+        <div class="mt-14 grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {{-- Basic --}}
+            <div class="p-8 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 flex flex-col">
+                <div class="flex items-baseline justify-between">
+                    <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Basic</h3>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Per household</span>
+                </div>
+                <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Everything you need to run the week.</p>
+                <div class="mt-6 flex items-baseline gap-1">
+                    <span class="text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">$19</span>
+                    <span class="text-zinc-500 dark:text-zinc-400">/ year</span>
+                </div>
+                <p class="mt-1 text-xs text-zinc-500">USD, billed annually</p>
+
+                <ul class="mt-6 space-y-3 text-sm text-zinc-700 dark:text-zinc-300 flex-1">
+                    <li class="flex gap-2"><span class="text-emerald-500">✓</span> Drag-and-drop weekly meal planner</li>
+                    <li class="flex gap-2"><span class="text-emerald-500">✓</span> Shared to-do lists with assignees & recurrence</li>
+                    <li class="flex gap-2"><span class="text-emerald-500">✓</span> Attendance, availability & leftovers</li>
+                    <li class="flex gap-2"><span class="text-emerald-500">✓</span> Recipes, shopping list & daily tracker</li>
+                    <li class="flex gap-2"><span class="text-emerald-500">✓</span> Unlimited family members</li>
+                </ul>
+
+                <a href="{{ route('login') }}" class="mt-8 inline-flex justify-center items-center gap-2 px-5 py-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 text-white font-semibold">
+                    Start with Basic
+                </a>
+            </div>
+
+            {{-- AI --}}
+            <div class="relative p-8 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white border border-indigo-500 shadow-xl flex flex-col">
+                <span class="absolute -top-3 right-6 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider bg-white text-indigo-700 px-3 py-1 rounded-full shadow">
+                    ✦ Smartest plan
+                </span>
+                <div class="flex items-baseline justify-between">
+                    <h3 class="text-xl font-semibold">AI</h3>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-indigo-100">Per household</span>
+                </div>
+                <p class="mt-2 text-sm text-indigo-100">Let Life do the planning thinking for you.</p>
+                <div class="mt-6 flex items-baseline gap-1">
+                    <span class="text-5xl font-extrabold tracking-tight">$99</span>
+                    <span class="text-indigo-100">/ year</span>
+                </div>
+                <p class="mt-1 text-xs text-indigo-200">USD, billed annually</p>
+
+                <ul class="mt-6 space-y-3 text-sm flex-1">
+                    <li class="flex gap-2"><span class="text-white">✓</span> Everything in Basic</li>
+                    <li class="flex gap-2"><span class="text-white">✓</span> AI-suggested weekly meal plans</li>
+                    <li class="flex gap-2"><span class="text-white">✓</span> Smart recipe ideas from what's on hand</li>
+                    <li class="flex gap-2"><span class="text-white">✓</span> Auto-tagged shopping lists</li>
+                    <li class="flex gap-2"><span class="text-white">✓</span> Natural-language to-do capture</li>
+                </ul>
+
+                <a href="{{ route('login') }}" class="mt-8 inline-flex justify-center items-center gap-2 px-5 py-3 rounded-lg bg-white text-indigo-700 hover:bg-indigo-50 font-semibold">
+                    Start with AI
+                </a>
+            </div>
+        </div>
+
+        <p class="mt-8 text-center text-sm text-zinc-500">Try any plan free for 14 days. Cancel anytime.</p>
     </div>
 </section>
 

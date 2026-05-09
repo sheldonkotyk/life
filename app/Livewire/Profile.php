@@ -2,9 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Models\FamilyMember;
 use App\Models\Household;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -12,6 +14,13 @@ use Livewire\WithFileUploads;
 class Profile extends Component
 {
     use WithFileUploads;
+
+    public const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+    public const SLOTS = ['breakfast', 'lunch', 'dinner'];
+
+    #[Url(as: 'tab')]
+    public string $tab = 'profile';
 
     public string $name = '';
 
@@ -101,6 +110,51 @@ class Profile extends Component
         $user->update(['avatar' => null]);
         $this->avatar = null;
         session()->flash('status', 'Avatar removed.');
+    }
+
+    public function getMemberProperty(): ?FamilyMember
+    {
+        return auth()->user()->familyMember;
+    }
+
+    public function toggleAttendance(string $day, string $slot): void
+    {
+        $member = $this->member;
+        abort_unless($member, 404);
+
+        if (! in_array($day, self::DAYS, true) || ! in_array($slot, self::SLOTS, true)) {
+            return;
+        }
+
+        $member->setDefaultAttendance($day, $slot, ! $member->attendsByDefault($day, $slot));
+    }
+
+    public function setDayAttendance(string $day, bool $value): void
+    {
+        $member = $this->member;
+        abort_unless($member, 404);
+
+        if (! in_array($day, self::DAYS, true)) {
+            return;
+        }
+
+        foreach (self::SLOTS as $slot) {
+            $member->setDefaultAttendance($day, $slot, $value);
+        }
+    }
+
+    public function setSlotAttendance(string $slot, bool $value): void
+    {
+        $member = $this->member;
+        abort_unless($member, 404);
+
+        if (! in_array($slot, self::SLOTS, true)) {
+            return;
+        }
+
+        foreach (self::DAYS as $day) {
+            $member->setDefaultAttendance($day, $slot, $value);
+        }
     }
 
     public function render()
