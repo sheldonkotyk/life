@@ -22,11 +22,17 @@ class Avatar
 
     public const FACIAL_HAIR_COLORS = ['#1c1410', '#3a2418', '#6b3f1f', '#a86f3d', '#d9a441', '#e8e2d0', '#b8b8b8', '#cf3a2f'];
 
+    public const MOUTH_COLORS = ['#3a1f14', '#a8554a', '#c97064', '#d98a7e', '#b83f3f', '#7a1f1f', '#5b2a2a', '#e8a59b'];
+
     public const HAIR_STYLES = ['short', 'long', 'buzz', 'bun', 'bald'];
 
     public const EYE_STYLES = ['default', 'happy', 'wink'];
 
     public const MOUTH_STYLES = ['smile', 'neutral', 'grin'];
+
+    public const NOSE_STYLES = ['none', 'button', 'pointed', 'wide'];
+
+    public const EAR_STYLES = ['default', 'small', 'large', 'pointed'];
 
     public const FACIAL_HAIR_STYLES = ['none', 'mustache', 'beard'];
 
@@ -47,6 +53,9 @@ class Avatar
             'eyes' => 'default',
             'eye_color' => '#1c1410',
             'mouth' => 'smile',
+            'mouth_color' => '#3a1f14',
+            'nose' => 'button',
+            'ears' => 'default',
             'facial_hair' => 'none',
             'facial_hair_color' => '#3a2418',
             'top' => ['style' => 'tshirt', 'color' => '#2563eb'],
@@ -76,6 +85,9 @@ class Avatar
             'eyes' => self::pickEnum($config['eyes'] ?? null, self::EYE_STYLES, $defaults['eyes']),
             'eye_color' => self::pick($config['eye_color'] ?? null, self::EYE_COLORS, $defaults['eye_color']),
             'mouth' => self::pickEnum($config['mouth'] ?? null, self::MOUTH_STYLES, $defaults['mouth']),
+            'mouth_color' => self::pick($config['mouth_color'] ?? null, self::MOUTH_COLORS, $defaults['mouth_color']),
+            'nose' => self::pickEnum($config['nose'] ?? null, self::NOSE_STYLES, $defaults['nose']),
+            'ears' => self::pickEnum($config['ears'] ?? null, self::EAR_STYLES, $defaults['ears']),
             'facial_hair' => self::pickEnum($config['facial_hair'] ?? null, self::FACIAL_HAIR_STYLES, $defaults['facial_hair']),
             'facial_hair_color' => self::pick($config['facial_hair_color'] ?? null, self::FACIAL_HAIR_COLORS, $defaults['facial_hair_color']),
             'top' => [

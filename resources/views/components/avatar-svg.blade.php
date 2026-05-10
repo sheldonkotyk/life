@@ -126,13 +126,40 @@
         {{-- waist accent --}}
         <rect x="60" y="165" width="80" height="4" fill="rgba(0,0,0,0.18)" />
     @endif
+
+    {{-- Arms --}}
+    @php $longSleeve = in_array($topStyle, ['dress-shirt', 'hoodie'], true); @endphp
+    @if ($longSleeve)
+        {{-- Hands emerging from long sleeves --}}
+        <circle cx="56" cy="204" r="7" fill="{{ $skin }}" />
+        <circle cx="144" cy="204" r="7" fill="{{ $skin }}" />
+        <path d="M50 200 Q56 198 62 200" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1" />
+        <path d="M138 200 Q144 198 150 200" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1" />
+    @else
+        {{-- Skin forearms hanging from short sleeves, ending in hands --}}
+        <rect x="42" y="142" width="14" height="56" rx="6" fill="{{ $skin }}" />
+        <rect x="144" y="142" width="14" height="56" rx="6" fill="{{ $skin }}" />
+        <circle cx="49" cy="202" r="7" fill="{{ $skin }}" />
+        <circle cx="151" cy="202" r="7" fill="{{ $skin }}" />
+    @endif
     </g>
 
     {{-- Head --}}
     <circle cx="100" cy="64" r="34" fill="{{ $skin }}" />
     {{-- Ears --}}
-    <ellipse cx="66" cy="68" rx="5" ry="8" fill="{{ $skin }}" />
-    <ellipse cx="134" cy="68" rx="5" ry="8" fill="{{ $skin }}" />
+    @if ($cfg['ears'] === 'small')
+        <ellipse cx="67" cy="68" rx="3" ry="6" fill="{{ $skin }}" />
+        <ellipse cx="133" cy="68" rx="3" ry="6" fill="{{ $skin }}" />
+    @elseif ($cfg['ears'] === 'large')
+        <ellipse cx="64" cy="68" rx="7" ry="11" fill="{{ $skin }}" />
+        <ellipse cx="136" cy="68" rx="7" ry="11" fill="{{ $skin }}" />
+    @elseif ($cfg['ears'] === 'pointed')
+        <path d="M70 60 L62 52 L66 76 Q70 78 72 72 Z" fill="{{ $skin }}" />
+        <path d="M130 60 L138 52 L134 76 Q130 78 128 72 Z" fill="{{ $skin }}" />
+    @else
+        <ellipse cx="66" cy="68" rx="5" ry="8" fill="{{ $skin }}" />
+        <ellipse cx="134" cy="68" rx="5" ry="8" fill="{{ $skin }}" />
+    @endif
 
     {{-- Eyes --}}
     @php $eyeColor = $cfg['eye_color']; @endphp
@@ -147,13 +174,25 @@
         <path d="M109 64 Q114 60 119 64" fill="none" stroke="{{ $eyeColor }}" stroke-width="2.2" stroke-linecap="round" />
     @endif
 
+    {{-- Nose --}}
+    @if ($cfg['nose'] === 'button')
+        <ellipse cx="100" cy="74" rx="3" ry="2" fill="rgba(0,0,0,0.18)" />
+    @elseif ($cfg['nose'] === 'pointed')
+        <path d="M100 68 L97 76 Q100 78 103 76 Z" fill="none" stroke="rgba(0,0,0,0.32)" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" />
+    @elseif ($cfg['nose'] === 'wide')
+        <path d="M95 74 Q100 77 105 74" fill="none" stroke="rgba(0,0,0,0.22)" stroke-width="1.2" stroke-linecap="round" />
+        <circle cx="96" cy="74" r="1.3" fill="rgba(0,0,0,0.32)" />
+        <circle cx="104" cy="74" r="1.3" fill="rgba(0,0,0,0.32)" />
+    @endif
+
     {{-- Mouth --}}
+    @php $mouthColor = $cfg['mouth_color']; @endphp
     @if ($cfg['mouth'] === 'smile')
-        <path d="M88 80 Q100 90 112 80" fill="none" stroke="#3a1f14" stroke-width="2" stroke-linecap="round" />
+        <path d="M88 80 Q100 90 112 80" fill="none" stroke="{{ $mouthColor }}" stroke-width="2" stroke-linecap="round" />
     @elseif ($cfg['mouth'] === 'neutral')
-        <line x1="90" y1="82" x2="110" y2="82" stroke="#3a1f14" stroke-width="2" stroke-linecap="round" />
+        <line x1="90" y1="82" x2="110" y2="82" stroke="{{ $mouthColor }}" stroke-width="2" stroke-linecap="round" />
     @elseif ($cfg['mouth'] === 'grin')
-        <path d="M86 78 Q100 92 114 78 Q100 86 86 78 Z" fill="#7a1f1f" stroke="#3a1f14" stroke-width="1.5" />
+        <path d="M86 78 Q100 92 114 78 Q100 86 86 78 Z" fill="{{ $mouthColor }}" stroke="#3a1f14" stroke-width="1.5" />
         <path d="M88 80 L112 80" stroke="#ffffff" stroke-width="1.2" />
     @endif
 

@@ -50,6 +50,21 @@ class AvatarBuilder extends Component
         $this->config['mouth'] = $style;
     }
 
+    public function setMouthColor(string $color): void
+    {
+        $this->config['mouth_color'] = $color;
+    }
+
+    public function setNose(string $style): void
+    {
+        $this->config['nose'] = $style;
+    }
+
+    public function setEars(string $style): void
+    {
+        $this->config['ears'] = $style;
+    }
+
     public function setFacialHair(string $style): void
     {
         $this->config['facial_hair'] = $style;
@@ -112,6 +127,9 @@ class AvatarBuilder extends Component
             'eyes' => collect(Avatar::EYE_STYLES)->random(),
             'eye_color' => collect(Avatar::EYE_COLORS)->random(),
             'mouth' => collect(Avatar::MOUTH_STYLES)->random(),
+            'mouth_color' => collect(Avatar::MOUTH_COLORS)->random(),
+            'nose' => collect(Avatar::NOSE_STYLES)->random(),
+            'ears' => collect(Avatar::EAR_STYLES)->random(),
             'facial_hair' => collect(Avatar::FACIAL_HAIR_STYLES)->random(),
             'facial_hair_color' => collect(Avatar::FACIAL_HAIR_COLORS)->random(),
             'top' => [
@@ -170,6 +188,9 @@ class AvatarBuilder extends Component
                 'eyeStyles' => Avatar::EYE_STYLES,
                 'eyeColors' => Avatar::EYE_COLORS,
                 'mouthStyles' => Avatar::MOUTH_STYLES,
+                'mouthColors' => Avatar::MOUTH_COLORS,
+                'noseStyles' => Avatar::NOSE_STYLES,
+                'earStyles' => Avatar::EAR_STYLES,
                 'facialHairStyles' => Avatar::FACIAL_HAIR_STYLES,
                 'facialHairColors' => Avatar::FACIAL_HAIR_COLORS,
                 'topStyles' => Avatar::TOP_STYLES,

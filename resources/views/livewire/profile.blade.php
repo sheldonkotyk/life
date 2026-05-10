@@ -215,6 +215,21 @@
                     <flux:button type="submit" variant="primary">Join</flux:button>
                 </form>
             </flux:card>
+
+            <flux:card>
+                <flux:heading size="lg">Create a new household</flux:heading>
+                <flux:text size="sm" variant="subtle" class="mb-3">
+                    Start a fresh household. You'll be its admin and can invite others with the invite code.
+                </flux:text>
+                <form wire:submit="createHousehold" class="flex items-start gap-2">
+                    <flux:input
+                        wire:model="newHouseholdName"
+                        placeholder="Household name"
+                        maxlength="120"
+                    />
+                    <flux:button type="submit" variant="primary">Create</flux:button>
+                </form>
+            </flux:card>
         </flux:tab.panel>
     </flux:tab.group>
 </div>

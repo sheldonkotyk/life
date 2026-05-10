@@ -27,6 +27,8 @@
                 'default' => 'Default', 'happy' => 'Happy', 'wink' => 'Wink',
                 'smile' => 'Smile', 'neutral' => 'Neutral', 'grin' => 'Grin',
                 'none' => 'None', 'mustache' => 'Mustache', 'beard' => 'Beard',
+                'button' => 'Button', 'pointed' => 'Pointed', 'wide' => 'Wide',
+                'small' => 'Small', 'large' => 'Large',
                 'cap' => 'Cap', 'beanie' => 'Beanie', 'tophat' => 'Top hat',
                 'slim' => 'Slim', 'average' => 'Average', 'broad' => 'Broad', 'kid' => 'Kid',
             ];
@@ -34,13 +36,14 @@
 
         @php
             $stylePillClass = function (bool $active): string {
-                return $active
-                    ? 'px-3 py-1.5 rounded-full text-xs font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
-                    : 'px-3 py-1.5 rounded-full text-xs font-medium bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200';
+                $base = 'h-8 inline-flex items-center px-3 rounded-full text-xs font-medium ';
+                return $base.($active
+                    ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200');
             };
             $swatchClass = function (bool $active): string {
-                return 'w-7 h-7 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-zinc-900 transition '
-                    . ($active ? 'ring-2 ring-zinc-900 dark:ring-white scale-110' : 'ring-1 ring-zinc-300 dark:ring-zinc-600 hover:scale-105');
+                return 'h-8 w-8 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-zinc-900 transition '
+                    .($active ? 'ring-2 ring-zinc-900 dark:ring-white' : 'ring-1 ring-zinc-300 dark:ring-zinc-600 hover:scale-105');
             };
         @endphp
 
@@ -115,6 +118,38 @@
                 @foreach ($opts['mouthStyles'] as $style)
                     <button type="button" wire:click="setMouth('{{ $style }}')"
                         class="{{ $stylePillClass($config['mouth'] === $style) }}">
+                        {{ $styleLabels[$style] }}
+                    </button>
+                @endforeach
+            </div>
+            <div class="flex flex-wrap gap-2 mt-3">
+                @foreach ($opts['mouthColors'] as $color)
+                    <button type="button" wire:click="setMouthColor('{{ $color }}')"
+                        class="{{ $swatchClass($config['mouth_color'] === $color) }}"
+                        style="background-color: {{ $color }}"
+                        aria-label="Mouth {{ $color }}"></button>
+                @endforeach
+            </div>
+        </div>
+
+        <div>
+            <flux:heading size="sm">Nose</flux:heading>
+            <div class="flex flex-wrap gap-2 mt-3">
+                @foreach ($opts['noseStyles'] as $style)
+                    <button type="button" wire:click="setNose('{{ $style }}')"
+                        class="{{ $stylePillClass($config['nose'] === $style) }}">
+                        {{ $styleLabels[$style] }}
+                    </button>
+                @endforeach
+            </div>
+        </div>
+
+        <div>
+            <flux:heading size="sm">Ears</flux:heading>
+            <div class="flex flex-wrap gap-2 mt-3">
+                @foreach ($opts['earStyles'] as $style)
+                    <button type="button" wire:click="setEars('{{ $style }}')"
+                        class="{{ $stylePillClass($config['ears'] === $style) }}">
                         {{ $styleLabels[$style] }}
                     </button>
                 @endforeach

@@ -32,6 +32,8 @@ class Profile extends Component
 
     public string $joinCode = '';
 
+    public string $newHouseholdName = '';
+
     public function mount(): void
     {
         $user = auth()->user();
@@ -97,6 +99,21 @@ class Profile extends Component
 
         $this->joinCode = '';
         session()->flash('status', 'You joined '.$household->name.'.');
+        $this->redirectRoute('household', navigate: true);
+    }
+
+    public function createHousehold(): void
+    {
+        $this->validate([
+            'newHouseholdName' => ['required', 'string', 'max:120'],
+        ]);
+
+        $user = auth()->user();
+        $household = Household::create(['name' => trim($this->newHouseholdName)]);
+        $user->joinHousehold($household);
+
+        $this->newHouseholdName = '';
+        session()->flash('status', 'Created '.$household->name.'.');
         $this->redirectRoute('household', navigate: true);
     }
 
