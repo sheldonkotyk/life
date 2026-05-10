@@ -24,7 +24,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'birthday' => 'date',
+            'avatar_config' => 'array',
         ];
+    }
+
+    public function hasBuiltAvatar(): bool
+    {
+        return ! empty($this->avatar_config);
     }
 
     public function getTimezone(): string
@@ -34,6 +40,10 @@ class User extends Authenticatable
 
     public function getAvatarAttribute(?string $value): ?string
     {
+        if ($this->hasBuiltAvatar()) {
+            return $this->builtAvatarDataUri();
+        }
+
         if ($value) {
             return str_starts_with($value, 'http') ? $value : Storage::disk('public')->url($value);
         }
@@ -45,6 +55,20 @@ class User extends Authenticatable
         $hash = md5(strtolower(trim($this->email)));
 
         return "https://www.gravatar.com/avatar/{$hash}?s=200&d=mp";
+    }
+
+    public function builtAvatarDataUri(): ?string
+    {
+        if (! $this->hasBuiltAvatar()) {
+            return null;
+        }
+
+        $svg = view('components.avatar-svg', [
+            'config' => $this->avatar_config,
+            'background' => '#ffffff',
+        ])->render();
+
+        return 'data:image/svg+xml;base64,'.base64_encode(trim($svg));
     }
 
     public function household(): BelongsTo

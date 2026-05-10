@@ -12,10 +12,19 @@
     ];
     $classes = $sizes[$size] ?? $sizes['md'];
     $initial = strtoupper(mb_substr($member->name, 0, 1));
-    $avatarUrl = $member->user?->avatar;
+    $user = $member->user;
+    $hasBuilt = $user?->hasBuiltAvatar();
+    $avatarUrl = $hasBuilt ? null : $user?->avatar;
 @endphp
 
-@if ($avatarUrl)
+@if ($hasBuilt)
+    <span
+        {{ $attributes->merge(['class' => "$classes rounded-full overflow-hidden ring-1 ring-white shadow-sm shrink-0 inline-block"]) }}
+        title="{{ $member->name }}"
+    >
+        <x-avatar-svg :config="$user->avatar_config" class="w-full h-full" />
+    </span>
+@elseif ($avatarUrl)
     <img
         src="{{ $avatarUrl }}"
         alt="{{ $member->name }}"

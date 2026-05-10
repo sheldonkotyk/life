@@ -1,9 +1,10 @@
-<div class="max-w-xl mx-auto py-8 space-y-6">
+<div class="py-8 space-y-6">
     <flux:heading size="xl">Profile</flux:heading>
 
     <flux:tab.group>
         <flux:tabs wire:model.live="tab">
             <flux:tab name="profile">Profile</flux:tab>
+            <flux:tab name="avatar">Avatar builder</flux:tab>
             <flux:tab name="defaults">Defaults</flux:tab>
         </flux:tabs>
 
@@ -12,9 +13,15 @@
         <form wire:submit="save" class="space-y-4">
             <div class="flex items-center gap-4">
                 <div class="relative w-20 h-20">
-                    <img src="{{ auth()->user()->avatar }}" alt="Avatar"
-                        class="w-20 h-20 rounded-full object-cover ring-1 ring-zinc-200"
-                        wire:loading.class="opacity-40" wire:target="avatar" />
+                    @if (auth()->user()->hasBuiltAvatar())
+                        <div class="w-20 h-20 rounded-full overflow-hidden ring-1 ring-zinc-200">
+                            <x-avatar-svg :config="auth()->user()->avatar_config" class="w-full h-full" />
+                        </div>
+                    @else
+                        <img src="{{ auth()->user()->avatar }}" alt="Avatar"
+                            class="w-20 h-20 rounded-full object-cover ring-1 ring-zinc-200"
+                            wire:loading.class="opacity-40" wire:target="avatar" />
+                    @endif
                     <div wire:loading wire:target="avatar"
                         class="absolute inset-0 flex items-center justify-center">
                         <flux:icon.loading class="size-6 text-zinc-500" />
@@ -74,6 +81,16 @@
             <flux:button type="submit" variant="primary">Join</flux:button>
         </form>
     </flux:card>
+        </flux:tab.panel>
+
+        <flux:tab.panel name="avatar" class="space-y-6">
+            <flux:card>
+                <flux:heading size="lg">Build your avatar</flux:heading>
+                <flux:text size="sm" variant="subtle" class="mt-1 mb-4">
+                    Mix and match shoes, clothes, hair, face, and headwear. Saving overrides any uploaded photo.
+                </flux:text>
+                <livewire:avatar-builder />
+            </flux:card>
         </flux:tab.panel>
 
         <flux:tab.panel name="defaults" class="space-y-6">
