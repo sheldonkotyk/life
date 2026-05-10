@@ -20,6 +20,11 @@ class AvatarBuilder extends Component
         $this->config['skin'] = $color;
     }
 
+    public function setBodyType(string $type): void
+    {
+        $this->config['body_type'] = $type;
+    }
+
     public function setHairStyle(string $style): void
     {
         $this->config['hair']['style'] = $style;
@@ -99,6 +104,7 @@ class AvatarBuilder extends Component
     {
         $this->config = [
             'skin' => collect(Avatar::SKIN_TONES)->random(),
+            'body_type' => collect(Avatar::BODY_TYPES)->random(),
             'hair' => [
                 'style' => collect(Avatar::HAIR_STYLES)->random(),
                 'color' => collect(Avatar::HAIR_COLORS)->random(),
@@ -154,6 +160,7 @@ class AvatarBuilder extends Component
         return view('livewire.avatar-builder', [
             'opts' => [
                 'skinTones' => Avatar::SKIN_TONES,
+                'bodyTypes' => Avatar::BODY_TYPES,
                 'hairColors' => Avatar::HAIR_COLORS,
                 'topColors' => Avatar::TOP_COLORS,
                 'bottomColors' => Avatar::BOTTOM_COLORS,

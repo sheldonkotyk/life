@@ -22,7 +22,7 @@
         {{ $attributes->merge(['class' => "$classes rounded-full overflow-hidden ring-1 ring-white shadow-sm shrink-0 inline-block"]) }}
         title="{{ $member->name }}"
     >
-        <x-avatar-svg :config="$user->avatar_config" class="w-full h-full" />
+        <x-avatar-headshot :config="$user->avatar_config" class="w-full h-full" />
     </span>
 @elseif ($avatarUrl)
     <img

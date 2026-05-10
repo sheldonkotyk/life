@@ -28,6 +28,7 @@
                 'smile' => 'Smile', 'neutral' => 'Neutral', 'grin' => 'Grin',
                 'none' => 'None', 'mustache' => 'Mustache', 'beard' => 'Beard',
                 'cap' => 'Cap', 'beanie' => 'Beanie', 'tophat' => 'Top hat',
+                'slim' => 'Slim', 'average' => 'Average', 'broad' => 'Broad', 'kid' => 'Kid',
             ];
         @endphp
 
@@ -43,9 +44,17 @@
             };
         @endphp
 
-        {{-- Skin --}}
+        {{-- Skin / body --}}
         <div>
-            <flux:heading size="sm">Skin</flux:heading>
+            <flux:heading size="sm">Skin / body-type</flux:heading>
+            <div class="flex flex-wrap gap-2 mt-3">
+                @foreach ($opts['bodyTypes'] as $type)
+                    <button type="button" wire:click="setBodyType('{{ $type }}')"
+                        class="{{ $stylePillClass($config['body_type'] === $type) }}">
+                        {{ $styleLabels[$type] }}
+                    </button>
+                @endforeach
+            </div>
             <div class="flex flex-wrap gap-2 mt-3">
                 @foreach ($opts['skinTones'] as $color)
                     <button type="button" wire:click="setSkin('{{ $color }}')"

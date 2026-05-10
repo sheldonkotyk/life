@@ -6,6 +6,7 @@
             <flux:tab name="profile">Profile</flux:tab>
             <flux:tab name="avatar">Avatar builder</flux:tab>
             <flux:tab name="defaults">Defaults</flux:tab>
+            <flux:tab name="households">Households</flux:tab>
         </flux:tabs>
 
         <flux:tab.panel name="profile" class="space-y-6">
@@ -15,7 +16,7 @@
                 <div class="relative w-20 h-20">
                     @if (auth()->user()->hasBuiltAvatar())
                         <div class="w-20 h-20 rounded-full overflow-hidden ring-1 ring-zinc-200">
-                            <x-avatar-svg :config="auth()->user()->avatar_config" class="w-full h-full" />
+                            <x-avatar-headshot :config="auth()->user()->avatar_config" class="w-full h-full" />
                         </div>
                     @else
                         <img src="{{ auth()->user()->avatar }}" alt="Avatar"
@@ -66,21 +67,6 @@
         </form>
     </flux:card>
 
-    <flux:card>
-        <flux:heading size="lg">Join another household</flux:heading>
-        <flux:text size="sm" variant="subtle" class="mb-3">
-            Enter an invite code to switch to a different household.
-        </flux:text>
-        <form wire:submit="joinHousehold" class="flex items-start gap-2">
-            <flux:input
-                wire:model="joinCode"
-                placeholder="INVITE CODE"
-                class="font-mono uppercase"
-                maxlength="12"
-            />
-            <flux:button type="submit" variant="primary">Join</flux:button>
-        </form>
-    </flux:card>
         </flux:tab.panel>
 
         <flux:tab.panel name="avatar" class="space-y-6">
@@ -163,6 +149,71 @@
                         </table>
                     </div>
                 @endif
+            </flux:card>
+        </flux:tab.panel>
+
+        <flux:tab.panel name="households" class="space-y-6">
+            @php
+                $user = auth()->user();
+                $households = $user->households()->withPivot('role')->orderBy('households.name')->get();
+                $activeId = $user->household_id;
+            @endphp
+
+            <flux:card>
+                <flux:heading size="lg">Your households</flux:heading>
+                <flux:text size="sm" variant="subtle" class="mt-1 mb-4">
+                    Switch between households or leave ones you no longer need.
+                </flux:text>
+
+                @if ($households->isEmpty())
+                    <flux:callout color="zinc" icon="home">
+                        You aren't part of any households yet.
+                    </flux:callout>
+                @else
+                    <ul class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @foreach ($households as $h)
+                            <li class="flex items-center justify-between gap-3 py-3" wire:key="hh-{{ $h->id }}">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <flux:heading size="sm" class="truncate">{{ $h->name }}</flux:heading>
+                                    @if ($h->id === $activeId)
+                                        <flux:badge color="lime" size="sm">Active</flux:badge>
+                                    @endif
+                                    @if ($h->pivot->role === 'admin')
+                                        <flux:badge color="zinc" size="sm">Admin</flux:badge>
+                                    @endif
+                                </div>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    @if ($h->id !== $activeId)
+                                        <flux:button size="xs" wire:click="switchHousehold({{ $h->id }})">
+                                            Switch
+                                        </flux:button>
+                                    @endif
+                                    <flux:button size="xs" variant="danger"
+                                        wire:click="leaveHousehold({{ $h->id }})"
+                                        wire:confirm="Leave {{ $h->name }}?">
+                                        Leave
+                                    </flux:button>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </flux:card>
+
+            <flux:card>
+                <flux:heading size="lg">Join another household</flux:heading>
+                <flux:text size="sm" variant="subtle" class="mb-3">
+                    Enter an invite code to join a different household.
+                </flux:text>
+                <form wire:submit="joinHousehold" class="flex items-start gap-2">
+                    <flux:input
+                        wire:model="joinCode"
+                        placeholder="INVITE CODE"
+                        class="font-mono uppercase"
+                        maxlength="12"
+                    />
+                    <flux:button type="submit" variant="primary">Join</flux:button>
+                </form>
             </flux:card>
         </flux:tab.panel>
     </flux:tab.group>

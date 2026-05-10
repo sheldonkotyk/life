@@ -87,7 +87,7 @@ class Profile extends Component
 
         $user = auth()->user();
 
-        if ($user->household_id === $household->id) {
+        if ($user->households()->where('households.id', $household->id)->exists()) {
             $this->addError('joinCode', 'You are already in that household.');
 
             return;
@@ -97,6 +97,51 @@ class Profile extends Component
 
         $this->joinCode = '';
         session()->flash('status', 'You joined '.$household->name.'.');
+        $this->redirectRoute('household', navigate: true);
+    }
+
+    public function switchHousehold(int $householdId): void
+    {
+        $user = auth()->user();
+        $household = $user->households()->where('households.id', $householdId)->first();
+
+        abort_unless($household, 403);
+
+        $user->forceFill(['household_id' => $household->id])->save();
+        session()->flash('status', 'Switched to '.$household->name.'.');
+        $this->redirectRoute('household', navigate: true);
+    }
+
+    public function leaveHousehold(int $householdId): void
+    {
+        $user = auth()->user();
+        $household = $user->households()->where('households.id', $householdId)->first();
+
+        abort_unless($household, 403);
+
+        if ($user->isAdminOf($household)
+            && $household->admins()->where('users.id', '!=', $user->id)->doesntExist()
+            && $household->users()->where('users.id', '!=', $user->id)->exists()
+        ) {
+            session()->flash('error', 'Promote another admin before leaving '.$household->name.'.');
+
+            return;
+        }
+
+        $household->users()->detach($user->id);
+
+        if ($user->household_id === $household->id) {
+            $next = $user->households()->orderBy('households.id')->first();
+
+            if (! $next) {
+                $next = Household::create(['name' => ($user->name ?: 'Your')."'s Household"]);
+                $user->joinHousehold($next);
+            } else {
+                $user->forceFill(['household_id' => $next->id])->save();
+            }
+        }
+
+        session()->flash('status', 'Left '.$household->name.'.');
         $this->redirectRoute('household', navigate: true);
     }
 
