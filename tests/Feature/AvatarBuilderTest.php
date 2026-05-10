@@ -34,7 +34,7 @@ it('rejects invalid style values via normalization', function () {
     expect($user->avatar_config['top']['style'])->toBe(Avatar::defaultConfig()['top']['style']);
 });
 
-it('clearing the built avatar restores the upload/gravatar fallback', function () {
+it('clearing the built avatar restores the uploaded image fallback', function () {
     $user = loginUser();
     $user->update(['avatar_config' => Avatar::defaultConfig()]);
 
@@ -63,4 +63,15 @@ it('randomize produces a fully valid config', function () {
     expect($cfg['skin'])->toBeIn(Avatar::SKIN_TONES);
     expect($cfg['top']['style'])->toBeIn(Avatar::TOP_STYLES);
     expect($cfg['shoes']['style'])->toBeIn(Avatar::SHOE_STYLES);
+    expect($cfg['height'])->toBeIn(Avatar::HEIGHTS);
+});
+
+it('saves the selected height', function () {
+    $user = loginUser();
+
+    Livewire::test(AvatarBuilder::class)
+        ->call('setHeight', 'tall')
+        ->call('save');
+
+    expect($user->fresh()->avatar_config['height'])->toBe('tall');
 });

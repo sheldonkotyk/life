@@ -1,4 +1,4 @@
-<div class="max-w-4xl mx-auto py-8 space-y-6">
+<div class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
             <flux:heading size="xl">{{ $name ?: 'Household' }}</flux:heading>
@@ -20,12 +20,17 @@
     <flux:tab.group>
         <flux:tabs wire:model="tab">
             <flux:tab name="people">People</flux:tab>
+            <flux:tab name="connections">Connections</flux:tab>
             <flux:tab name="settings">Settings</flux:tab>
             <flux:tab name="danger">Leave / delete</flux:tab>
         </flux:tabs>
 
         <flux:tab.panel name="people">
             <livewire:family />
+        </flux:tab.panel>
+
+        <flux:tab.panel name="connections">
+            <livewire:family-connections />
         </flux:tab.panel>
 
         <flux:tab.panel name="settings" class="space-y-6">

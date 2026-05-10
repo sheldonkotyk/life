@@ -25,6 +25,11 @@ class AvatarBuilder extends Component
         $this->config['body_type'] = $type;
     }
 
+    public function setHeight(string $height): void
+    {
+        $this->config['height'] = $height;
+    }
+
     public function setHairStyle(string $style): void
     {
         $this->config['hair']['style'] = $style;
@@ -117,38 +122,7 @@ class AvatarBuilder extends Component
 
     public function randomize(): void
     {
-        $this->config = [
-            'skin' => collect(Avatar::SKIN_TONES)->random(),
-            'body_type' => collect(Avatar::BODY_TYPES)->random(),
-            'hair' => [
-                'style' => collect(Avatar::HAIR_STYLES)->random(),
-                'color' => collect(Avatar::HAIR_COLORS)->random(),
-            ],
-            'eyes' => collect(Avatar::EYE_STYLES)->random(),
-            'eye_color' => collect(Avatar::EYE_COLORS)->random(),
-            'mouth' => collect(Avatar::MOUTH_STYLES)->random(),
-            'mouth_color' => collect(Avatar::MOUTH_COLORS)->random(),
-            'nose' => collect(Avatar::NOSE_STYLES)->random(),
-            'ears' => collect(Avatar::EAR_STYLES)->random(),
-            'facial_hair' => collect(Avatar::FACIAL_HAIR_STYLES)->random(),
-            'facial_hair_color' => collect(Avatar::FACIAL_HAIR_COLORS)->random(),
-            'top' => [
-                'style' => collect(Avatar::TOP_STYLES)->random(),
-                'color' => collect(Avatar::TOP_COLORS)->random(),
-            ],
-            'bottom' => [
-                'style' => collect(Avatar::BOTTOM_STYLES)->random(),
-                'color' => collect(Avatar::BOTTOM_COLORS)->random(),
-            ],
-            'shoes' => [
-                'style' => collect(Avatar::SHOE_STYLES)->random(),
-                'color' => collect(Avatar::SHOE_COLORS)->random(),
-            ],
-            'hat' => [
-                'style' => collect(Avatar::HAT_STYLES)->random(),
-                'color' => collect(Avatar::HAT_COLORS)->random(),
-            ],
-        ];
+        $this->config = Avatar::randomConfig();
     }
 
     public function save(): void
@@ -163,6 +137,7 @@ class AvatarBuilder extends Component
             $user->update(['avatar' => null]);
         }
 
+        $this->dispatch('avatar-updated');
         session()->flash('status', 'Avatar saved.');
     }
 
@@ -170,6 +145,7 @@ class AvatarBuilder extends Component
     {
         auth()->user()->update(['avatar_config' => null]);
         $this->config = Avatar::defaultConfig();
+        $this->dispatch('avatar-updated');
         session()->flash('status', 'Built avatar removed.');
     }
 
@@ -179,6 +155,7 @@ class AvatarBuilder extends Component
             'opts' => [
                 'skinTones' => Avatar::SKIN_TONES,
                 'bodyTypes' => Avatar::BODY_TYPES,
+                'heights' => Avatar::HEIGHTS,
                 'hairColors' => Avatar::HAIR_COLORS,
                 'topColors' => Avatar::TOP_COLORS,
                 'bottomColors' => Avatar::BOTTOM_COLORS,

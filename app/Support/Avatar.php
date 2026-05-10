@@ -8,6 +8,8 @@ class Avatar
 
     public const BODY_TYPES = ['slim', 'average', 'broad', 'kid'];
 
+    public const HEIGHTS = ['short', 'average', 'tall'];
+
     public const HAIR_COLORS = ['#1c1410', '#3a2418', '#6b3f1f', '#a86f3d', '#d9a441', '#e8e2d0', '#b8b8b8', '#cf3a2f', '#5b2a86'];
 
     public const TOP_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#f59e0b', '#7c3aed', '#0f172a', '#ffffff', '#ec4899', '#0ea5e9'];
@@ -34,13 +36,13 @@ class Avatar
 
     public const EAR_STYLES = ['default', 'small', 'large', 'pointed'];
 
-    public const FACIAL_HAIR_STYLES = ['none', 'mustache', 'beard'];
+    public const FACIAL_HAIR_STYLES = ['none', 'mustache', 'goatee', 'beard'];
 
     public const TOP_STYLES = ['tshirt', 'dress-shirt', 'hoodie', 'dress'];
 
     public const BOTTOM_STYLES = ['pants', 'shorts', 'skirt'];
 
-    public const SHOE_STYLES = ['sneakers', 'boots', 'flats'];
+    public const SHOE_STYLES = ['sneakers', 'boots', 'flats', 'sandals'];
 
     public const HAT_STYLES = ['none', 'cap', 'beanie', 'tophat'];
 
@@ -49,6 +51,7 @@ class Avatar
         return [
             'skin' => '#f0c8a3',
             'body_type' => 'average',
+            'height' => 'average',
             'hair' => ['style' => 'short', 'color' => '#3a2418'],
             'eyes' => 'default',
             'eye_color' => '#1c1410',
@@ -78,6 +81,7 @@ class Avatar
         return [
             'skin' => self::pick($config['skin'] ?? null, self::SKIN_TONES, $defaults['skin']),
             'body_type' => self::pickEnum($config['body_type'] ?? null, self::BODY_TYPES, $defaults['body_type']),
+            'height' => self::pickEnum($config['height'] ?? null, self::HEIGHTS, $defaults['height']),
             'hair' => [
                 'style' => self::pickEnum($config['hair']['style'] ?? null, self::HAIR_STYLES, $defaults['hair']['style']),
                 'color' => self::pick($config['hair']['color'] ?? null, self::HAIR_COLORS, $defaults['hair']['color']),
@@ -109,19 +113,66 @@ class Avatar
         ];
     }
 
+    public static function randomConfig(): array
+    {
+        return [
+            'skin' => collect(self::SKIN_TONES)->random(),
+            'body_type' => collect(self::BODY_TYPES)->random(),
+            'height' => collect(self::HEIGHTS)->random(),
+            'hair' => [
+                'style' => collect(self::HAIR_STYLES)->random(),
+                'color' => collect(self::HAIR_COLORS)->random(),
+            ],
+            'eyes' => collect(self::EYE_STYLES)->random(),
+            'eye_color' => collect(self::EYE_COLORS)->random(),
+            'mouth' => collect(self::MOUTH_STYLES)->random(),
+            'mouth_color' => collect(self::MOUTH_COLORS)->random(),
+            'nose' => collect(self::NOSE_STYLES)->random(),
+            'ears' => collect(self::EAR_STYLES)->random(),
+            'facial_hair' => collect(self::FACIAL_HAIR_STYLES)->random(),
+            'facial_hair_color' => collect(self::FACIAL_HAIR_COLORS)->random(),
+            'top' => [
+                'style' => collect(self::TOP_STYLES)->random(),
+                'color' => collect(self::TOP_COLORS)->random(),
+            ],
+            'bottom' => [
+                'style' => collect(self::BOTTOM_STYLES)->random(),
+                'color' => collect(self::BOTTOM_COLORS)->random(),
+            ],
+            'shoes' => [
+                'style' => collect(self::SHOE_STYLES)->random(),
+                'color' => collect(self::SHOE_COLORS)->random(),
+            ],
+            'hat' => [
+                'style' => collect(self::HAT_STYLES)->random(),
+                'color' => collect(self::HAT_COLORS)->random(),
+            ],
+        ];
+    }
+
     /**
      * Scale factors for the body group, keyed by body type.
      *
      * @return array{scale_x: float, scale_y: float}
      */
-    public static function bodyScale(string $bodyType): array
+    public static function bodyScale(string $bodyType, string $height = 'average'): array
     {
-        return match ($bodyType) {
+        $body = match ($bodyType) {
             'slim' => ['scale_x' => 0.86, 'scale_y' => 1.0],
             'broad' => ['scale_x' => 1.16, 'scale_y' => 1.0],
             'kid' => ['scale_x' => 0.78, 'scale_y' => 0.9],
             default => ['scale_x' => 1.0, 'scale_y' => 1.0],
         };
+
+        $heightFactor = match ($height) {
+            'short' => 0.88,
+            'tall' => 1.1,
+            default => 1.0,
+        };
+
+        $body['scale_y'] *= $heightFactor;
+
+        return $body;
     }
 
     private static function pick(?string $value, array $palette, string $fallback): string

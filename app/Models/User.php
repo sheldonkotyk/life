@@ -18,6 +18,14 @@ class User extends Authenticatable
 
     protected $hidden = ['password', 'remember_token'];
 
+    public const NOTIFICATION_CHANNELS = ['site', 'email', 'push'];
+
+    public const DEFAULT_NOTIFICATION_PREFERENCES = [
+        'site' => true,
+        'email' => true,
+        'push' => true,
+    ];
+
     protected function casts(): array
     {
         return [
@@ -25,7 +33,24 @@ class User extends Authenticatable
             'password' => 'hashed',
             'birthday' => 'date',
             'avatar_config' => 'array',
+            'notification_preferences' => 'array',
         ];
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    public function notificationPreferences(): array
+    {
+        return array_merge(
+            self::DEFAULT_NOTIFICATION_PREFERENCES,
+            (array) ($this->notification_preferences ?? []),
+        );
+    }
+
+    public function wantsNotificationOn(string $channel): bool
+    {
+        return (bool) ($this->notificationPreferences()[$channel] ?? false);
     }
 
     public function hasBuiltAvatar(): bool
@@ -48,13 +73,7 @@ class User extends Authenticatable
             return str_starts_with($value, 'http') ? $value : Storage::disk('public')->url($value);
         }
 
-        if (! $this->email) {
-            return null;
-        }
-
-        $hash = md5(strtolower(trim($this->email)));
-
-        return "https://www.gravatar.com/avatar/{$hash}?s=200&d=mp";
+        return null;
     }
 
     public function builtAvatarDataUri(): ?string
@@ -63,7 +82,7 @@ class User extends Authenticatable
             return null;
         }
 
-        $svg = view('components.avatar-svg', [
+        $svg = view('components.avatar-headshot', [
             'config' => $this->avatar_config,
             'background' => '#ffffff',
         ])->render();

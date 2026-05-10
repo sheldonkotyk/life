@@ -102,6 +102,8 @@
 
             <flux:spacer />
 
+            <livewire:notification-bell />
+
             <flux:dropdown position="bottom" align="end" class="hidden lg:flex">
                 <flux:button size="sm" variant="ghost">
                     <flux:icon icon="sun" class="dark:hidden!" />

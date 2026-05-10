@@ -1,4 +1,4 @@
-<div class="py-8 space-y-6">
+<div class="space-y-6">
     <flux:heading size="xl">Profile</flux:heading>
 
     <flux:tab.group>
@@ -7,6 +7,7 @@
             <flux:tab name="avatar">Avatar builder</flux:tab>
             <flux:tab name="defaults">Defaults</flux:tab>
             <flux:tab name="households">Households</flux:tab>
+            <flux:tab name="notifications">Notifications</flux:tab>
         </flux:tabs>
 
         <flux:tab.panel name="profile" class="space-y-6">
@@ -229,6 +230,57 @@
                     />
                     <flux:button type="submit" variant="primary">Create</flux:button>
                 </form>
+            </flux:card>
+        </flux:tab.panel>
+
+        <flux:tab.panel name="notifications" class="space-y-6">
+            <flux:card>
+                <flux:heading size="lg">Notification preferences</flux:heading>
+                <flux:subheading>Choose how you want to be notified.</flux:subheading>
+
+                <div class="mt-6 space-y-4">
+                    <flux:switch
+                        wire:model.live="notificationPrefs.site"
+                        label="In-app"
+                        description="Show notifications in the bell menu inside the app." />
+
+                    <flux:switch
+                        wire:model.live="notificationPrefs.email"
+                        label="Email"
+                        description="Send notifications to {{ auth()->user()->email ?: 'your email' }}." />
+
+                    <flux:switch
+                        wire:model.live="notificationPrefs.push"
+                        label="Push"
+                        description="Send push notifications to your devices." />
+                </div>
+            </flux:card>
+
+            <flux:card>
+                <flux:heading size="lg">Daily "Today" email</flux:heading>
+                <flux:subheading>Get a morning summary of meals and to-dos. Times are in your timezone ({{ auth()->user()->getTimezone() }}).</flux:subheading>
+
+                <div class="mt-6 flex items-end gap-3">
+                    <flux:input
+                        type="time"
+                        label="Send at"
+                        wire:model.lazy="dailyTodayEmailAt"
+                        class="max-w-40" />
+
+                    @if ($dailyTodayEmailAt)
+                        <flux:button variant="ghost" wire:click="clearDailyTodayEmail">Turn off</flux:button>
+                    @endif
+                </div>
+
+                @if (! $notificationPrefs['email'])
+                    <flux:callout color="amber" icon="exclamation-triangle" class="mt-4">
+                        Email notifications are turned off. Enable them above to receive the daily digest.
+                    </flux:callout>
+                @endif
+
+                @error('dailyTodayEmailAt')
+                    <flux:text class="text-red-600 mt-2">{{ $message }}</flux:text>
+                @enderror
             </flux:card>
         </flux:tab.panel>
     </flux:tab.group>

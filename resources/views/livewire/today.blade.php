@@ -1,4 +1,4 @@
-<div class="space-y-4 max-w-3xl mx-auto">
+<div class="space-y-6">
     <div class="flex items-baseline justify-between">
         <flux:heading size="xl">Today</flux:heading>
         <flux:text size="sm" variant="subtle">{{ $today->format('l, M j') }}</flux:text>

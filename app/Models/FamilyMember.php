@@ -66,6 +66,16 @@ class FamilyMember extends Model
         return $this->hasMany(FamilyMemberUnavailability::class);
     }
 
+    public function outgoingConnections(): HasMany
+    {
+        return $this->hasMany(FamilyConnection::class, 'from_member_id');
+    }
+
+    public function incomingConnections(): HasMany
+    {
+        return $this->hasMany(FamilyConnection::class, 'to_member_id');
+    }
+
     public function scopeVisible($query)
     {
         return $query->where(fn ($q) => $q->where('is_guest', false)->orWhereHas('meals'));

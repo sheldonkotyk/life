@@ -4,8 +4,11 @@ namespace App\Livewire;
 
 use App\Models\FamilyMember;
 use App\Models\Household;
+use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -34,12 +37,62 @@ class Profile extends Component
 
     public string $newHouseholdName = '';
 
+    /** @var array<string, bool> */
+    public array $notificationPrefs = [];
+
+    public ?string $dailyTodayEmailAt = null;
+
     public function mount(): void
     {
         $user = auth()->user();
         $this->name = $user->name;
         $this->timezone = $user->getTimezone();
         $this->birthday = $user->birthday?->format('Y-m-d');
+        $this->notificationPrefs = $user->notificationPreferences();
+        $this->dailyTodayEmailAt = $user->daily_today_email_at
+            ? CarbonImmutable::parse($user->daily_today_email_at)->format('H:i')
+            : null;
+    }
+
+    public function updatedNotificationPrefs(): void
+    {
+        $user = auth()->user();
+
+        $prefs = [];
+        foreach (User::NOTIFICATION_CHANNELS as $channel) {
+            $prefs[$channel] = (bool) ($this->notificationPrefs[$channel] ?? false);
+        }
+
+        $user->update(['notification_preferences' => $prefs]);
+        $this->notificationPrefs = $prefs;
+    }
+
+    public function updatedDailyTodayEmailAt(): void
+    {
+        $value = trim((string) $this->dailyTodayEmailAt);
+
+        if ($value === '') {
+            auth()->user()->update([
+                'daily_today_email_at' => null,
+                'daily_today_email_last_sent_on' => null,
+            ]);
+            $this->dailyTodayEmailAt = null;
+
+            return;
+        }
+
+        $this->validate(['dailyTodayEmailAt' => ['date_format:H:i']]);
+
+        auth()->user()->update([
+            'daily_today_email_at' => $value,
+            'daily_today_email_last_sent_on' => null,
+        ]);
+    }
+
+    public function clearDailyTodayEmail(): void
+    {
+        $this->dailyTodayEmailAt = null;
+        $this->updatedDailyTodayEmailAt();
     }
 
     public function save(): void
@@ -58,6 +111,12 @@ class Profile extends Component
         session()->flash('status', 'Profile updated.');
     }
 
+    #[On('avatar-updated')]
+    public function refreshAvatar(): void
+    {
+        // The AvatarBuilder child updated the user; just re-render to pull fresh data.
+    }
+
     public function updatedAvatar(): void
     {
         $this->validate(['avatar' => ['image', 'max:1024']]);
@@ -68,7 +127,10 @@ class Profile extends Component
             Storage::disk('public')->delete($existing);
         }
 
-        $user->update(['avatar' => $this->avatar->store('avatars', 'public')]);
+        $user->update([
+            'avatar' => $this->avatar->store('avatars', 'public'),
+            'avatar_config' => null,
+        ]);
         $this->avatar = null;
     }
 
