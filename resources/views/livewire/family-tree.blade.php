@@ -54,23 +54,5 @@
             </div>
         </div>
 
-        @if (! empty($partnerPairs))
-            <flux:card>
-                <flux:heading size="sm">Partners</flux:heading>
-                <ul class="mt-2 space-y-1">
-                    @foreach ($partnerPairs as [$aId, $bId])
-                        @if ($members->has($aId) && $members->has($bId))
-                            <li class="text-sm flex items-center gap-2">
-                                <span class="inline-block size-2 rounded-full" style="background-color: {{ $members[$aId]->color }}"></span>
-                                <span class="font-medium">{{ $members[$aId]->name }}</span>
-                                <flux:text size="sm" variant="subtle">&amp;</flux:text>
-                                <span class="inline-block size-2 rounded-full" style="background-color: {{ $members[$bId]->color }}"></span>
-                                <span class="font-medium">{{ $members[$bId]->name }}</span>
-                            </li>
-                        @endif
-                    @endforeach
-                </ul>
-            </flux:card>
-        @endif
     @endif
 </div>

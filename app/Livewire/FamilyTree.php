@@ -118,7 +118,6 @@ class FamilyTree extends Component
             'rows' => $rows,
             'parentsOf' => $parentsOf,
             'childrenOf' => $childrenOf,
-            'partnerPairs' => array_values($partnerPairs),
         ]);
     }
 }
