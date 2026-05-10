@@ -10,13 +10,22 @@ class FamilyConnections extends Component
 {
     public ?int $fromId = null;
 
-    public string $type = 'parent';
+    public string $type = 'father';
 
     public ?int $toId = null;
 
     public string $notes = '';
 
     public ?int $focusMemberId = null;
+
+    public ?int $reciprocalFromId = null;
+
+    public ?int $reciprocalToId = null;
+
+    public ?string $reciprocalType = null;
+
+    /** @var array<int, string> */
+    public array $reciprocalOptions = [];
 
     public function rules(): array
     {
@@ -45,15 +54,75 @@ class FamilyConnections extends Component
             'type' => $this->type,
         ], ['notes' => $this->notes ?: null]);
 
-        $reciprocal = FamilyConnection::reciprocalType($this->type);
-        FamilyConnection::firstOrCreate([
-            'from_member_id' => $this->toId,
-            'to_member_id' => $this->fromId,
-            'type' => $reciprocal,
-        ]);
+        $this->suggestReciprocal($this->fromId, $this->toId, $this->type);
 
         $this->reset(['type', 'notes', 'toId']);
-        $this->type = 'parent';
+        $this->type = 'father';
+    }
+
+    protected function suggestReciprocal(int $fromId, int $toId, string $type): void
+    {
+        $options = FamilyConnection::RECIPROCALS[$type] ?? [];
+        if (empty($options)) {
+            $this->clearReciprocal();
+
+            return;
+        }
+
+        $alreadyExists = FamilyConnection::where('from_member_id', $toId)
+            ->where('to_member_id', $fromId)
+            ->whereIn('type', $options)
+            ->exists();
+
+        if ($alreadyExists) {
+            $this->clearReciprocal();
+
+            return;
+        }
+
+        $this->reciprocalFromId = $toId;
+        $this->reciprocalToId = $fromId;
+        $this->reciprocalOptions = $options;
+        $this->reciprocalType = $options[0];
+    }
+
+    public function confirmReciprocal(): void
+    {
+        if (! $this->reciprocalFromId || ! $this->reciprocalToId || ! $this->reciprocalType) {
+            return;
+        }
+
+        if (! in_array($this->reciprocalType, $this->reciprocalOptions, true)) {
+            return;
+        }
+
+        $householdId = auth()->user()->household_id;
+        $valid = FamilyMember::where('household_id', $householdId)
+            ->whereIn('id', [$this->reciprocalFromId, $this->reciprocalToId])
+            ->count() === 2;
+
+        abort_unless($valid, 403);
+
+        FamilyConnection::firstOrCreate([
+            'from_member_id' => $this->reciprocalFromId,
+            'to_member_id' => $this->reciprocalToId,
+            'type' => $this->reciprocalType,
+        ]);
+
+        $this->clearReciprocal();
+    }
+
+    public function dismissReciprocal(): void
+    {
+        $this->clearReciprocal();
+    }
+
+    protected function clearReciprocal(): void
+    {
+        $this->reciprocalFromId = null;
+        $this->reciprocalToId = null;
+        $this->reciprocalType = null;
+        $this->reciprocalOptions = [];
     }
 
     public function remove(int $id): void
@@ -65,13 +134,7 @@ class FamilyConnections extends Component
             return;
         }
 
-        FamilyConnection::where(function ($q) use ($connection) {
-            $q->where(['from_member_id' => $connection->from_member_id, 'to_member_id' => $connection->to_member_id])
-                ->orWhere(function ($q2) use ($connection) {
-                    $q2->where('from_member_id', $connection->to_member_id)
-                        ->where('to_member_id', $connection->from_member_id);
-                });
-        })->delete();
+        $connection->delete();
     }
 
     public function focus(?int $memberId): void
@@ -100,21 +163,6 @@ class FamilyConnections extends Component
 
         $connections = $connectionsQuery->get();
 
-        // Collapse reciprocal pairs — show the one whose from_member_id is lower
-        // so each relationship appears once in the list.
-        $pairs = [];
-        $seen = [];
-        foreach ($connections as $c) {
-            $key = min($c->from_member_id, $c->to_member_id).':'.max($c->from_member_id, $c->to_member_id);
-            if (isset($seen[$key])) {
-                continue;
-            }
-            $seen[$key] = true;
-            $pairs[] = $c->from_member_id <= $c->to_member_id
-                ? $c
-                : $connections->firstWhere(fn ($x) => $x->from_member_id === $c->to_member_id && $x->to_member_id === $c->from_member_id) ?? $c;
-        }
-
         if ($this->fromId === null && $members->isNotEmpty()) {
             $this->fromId = $members->first()->id;
         }
@@ -125,7 +173,7 @@ class FamilyConnections extends Component
 
         return view('livewire.family-connections', [
             'members' => $members,
-            'pairs' => collect($pairs),
+            'pairs' => $connections,
             'types' => FamilyConnection::TYPES,
         ]);
     }

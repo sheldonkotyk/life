@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
@@ -22,6 +23,7 @@ class HouseholdSettings extends Component
 
     public ?int $successorId = null;
 
+    #[Url(as: 'tab', history: true, keep: false)]
     public string $tab = 'people';
 
     public function mount(): void

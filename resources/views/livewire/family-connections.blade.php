@@ -66,6 +66,44 @@
             </form>
         </flux:card>
 
+        @if ($reciprocalFromId && $reciprocalToId)
+            @php
+                $recipFrom = $members->firstWhere('id', $reciprocalFromId);
+                $recipTo = $members->firstWhere('id', $reciprocalToId);
+            @endphp
+            @if ($recipFrom && $recipTo)
+                <flux:card>
+                    <flux:heading size="sm">Add the reciprocal?</flux:heading>
+                    <flux:text size="sm" variant="subtle" class="mt-1">
+                        Should we also record that {{ $recipFrom->name }} is the
+                        @if (count($reciprocalOptions) === 1)
+                            <strong>{{ $types[$reciprocalOptions[0]]['label'] }}</strong>
+                        @endif
+                        {{ $recipTo->name }}?
+                    </flux:text>
+
+                    <div class="flex flex-wrap items-end gap-3 mt-3">
+                        @if (count($reciprocalOptions) > 1)
+                            <flux:field>
+                                <flux:label>Relationship</flux:label>
+                                <flux:select wire:model="reciprocalType">
+                                    @foreach ($reciprocalOptions as $opt)
+                                        <flux:select.option value="{{ $opt }}">{{ $types[$opt]['label'] }}</flux:select.option>
+                                    @endforeach
+                                </flux:select>
+                            </flux:field>
+                        @endif
+                        <flux:button type="button" variant="primary" icon="plus" wire:click="confirmReciprocal">
+                            Yes, add it
+                        </flux:button>
+                        <flux:button type="button" variant="ghost" wire:click="dismissReciprocal">
+                            No thanks
+                        </flux:button>
+                    </div>
+                </flux:card>
+            @endif
+        @endif
+
         <div class="flex flex-wrap items-center gap-2">
             <flux:text size="sm" variant="subtle">Filter:</flux:text>
             <flux:button size="sm" variant="{{ $focusMemberId === null ? 'primary' : 'ghost' }}" wire:click="focus(null)">Everyone</flux:button>

@@ -10,21 +10,48 @@ class FamilyConnection extends Model
     protected $guarded = [];
 
     public const TYPES = [
-        'parent' => ['label' => 'Parent of', 'reciprocal' => 'child'],
-        'child' => ['label' => 'Child of', 'reciprocal' => 'parent'],
-        'son' => ['label' => 'Son of', 'reciprocal' => 'parent'],
-        'daughter' => ['label' => 'Daughter of', 'reciprocal' => 'parent'],
-        'spouse' => ['label' => 'Spouse of', 'reciprocal' => 'spouse'],
-        'husband' => ['label' => 'Husband of', 'reciprocal' => 'spouse'],
-        'wife' => ['label' => 'Wife of', 'reciprocal' => 'spouse'],
-        'partner' => ['label' => 'Partner of', 'reciprocal' => 'partner'],
-        'boyfriend' => ['label' => 'Boyfriend of', 'reciprocal' => 'partner'],
-        'girlfriend' => ['label' => 'Girlfriend of', 'reciprocal' => 'partner'],
-        'sibling' => ['label' => 'Sibling of', 'reciprocal' => 'sibling'],
-        'grandparent' => ['label' => 'Grandparent of', 'reciprocal' => 'grandchild'],
-        'grandchild' => ['label' => 'Grandchild of', 'reciprocal' => 'grandparent'],
-        'friend' => ['label' => 'Friend of', 'reciprocal' => 'friend'],
-        'other' => ['label' => 'Connected to', 'reciprocal' => 'other'],
+        'father' => ['label' => 'Father of'],
+        'mother' => ['label' => 'Mother of'],
+        'step-father' => ['label' => 'Step-father of'],
+        'step-mother' => ['label' => 'Step-mother of'],
+        'son' => ['label' => 'Son of'],
+        'daughter' => ['label' => 'Daughter of'],
+        'step-son' => ['label' => 'Step-son of'],
+        'step-daughter' => ['label' => 'Step-daughter of'],
+        'husband' => ['label' => 'Husband of'],
+        'wife' => ['label' => 'Wife of'],
+        'boyfriend' => ['label' => 'Boyfriend of'],
+        'girlfriend' => ['label' => 'Girlfriend of'],
+        'brother' => ['label' => 'Brother of'],
+        'sister' => ['label' => 'Sister of'],
+        'grandfather' => ['label' => 'Grandfather of'],
+        'grandmother' => ['label' => 'Grandmother of'],
+        'grandson' => ['label' => 'Grandson of'],
+        'granddaughter' => ['label' => 'Granddaughter of'],
+        'friend' => ['label' => 'Friend of'],
+        'other' => ['label' => 'Connected to'],
+    ];
+
+    public const RECIPROCALS = [
+        'father' => ['son', 'daughter'],
+        'mother' => ['son', 'daughter'],
+        'step-father' => ['step-son', 'step-daughter'],
+        'step-mother' => ['step-son', 'step-daughter'],
+        'son' => ['father', 'mother'],
+        'daughter' => ['father', 'mother'],
+        'step-son' => ['step-father', 'step-mother'],
+        'step-daughter' => ['step-father', 'step-mother'],
+        'husband' => ['wife', 'husband'],
+        'wife' => ['husband', 'wife'],
+        'boyfriend' => ['girlfriend', 'boyfriend'],
+        'girlfriend' => ['boyfriend', 'girlfriend'],
+        'brother' => ['brother', 'sister'],
+        'sister' => ['brother', 'sister'],
+        'grandfather' => ['grandson', 'granddaughter'],
+        'grandmother' => ['grandson', 'granddaughter'],
+        'grandson' => ['grandfather', 'grandmother'],
+        'granddaughter' => ['grandfather', 'grandmother'],
+        'friend' => ['friend'],
     ];
 
     public function fromMember(): BelongsTo
@@ -40,10 +67,5 @@ class FamilyConnection extends Model
     public function typeLabel(): string
     {
         return self::TYPES[$this->type]['label'] ?? ucfirst($this->type);
-    }
-
-    public static function reciprocalType(string $type): string
-    {
-        return self::TYPES[$type]['reciprocal'] ?? $type;
     }
 }

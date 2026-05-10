@@ -18,7 +18,7 @@
     @endif
 
     <flux:tab.group>
-        <flux:tabs wire:model="tab">
+        <flux:tabs wire:model.live="tab">
             <flux:tab name="people">People</flux:tab>
             <flux:tab name="connections">Connections</flux:tab>
             <flux:tab name="settings">Settings</flux:tab>
