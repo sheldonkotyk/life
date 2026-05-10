@@ -74,25 +74,25 @@
             @if ($recipFrom && $recipTo)
                 <flux:card>
                     <flux:heading size="sm">Add the reciprocal?</flux:heading>
-                    <flux:text size="sm" variant="subtle" class="mt-1">
-                        Should we also record that {{ $recipFrom->name }} is the
+                    <div class="flex flex-wrap items-center gap-2 mt-2">
+                        <flux:text size="sm" variant="subtle">Should we also record that</flux:text>
+                        <strong>{{ $recipFrom->name }}</strong>
+                        <flux:text size="sm" variant="subtle">is the</flux:text>
                         @if (count($reciprocalOptions) === 1)
-                            <strong>{{ $types[$reciprocalOptions[0]]['label'] }}</strong>
+                            <strong>{{ \Illuminate\Support\Str::of($types[$reciprocalOptions[0]]['label'])->replaceLast(' of', '') }}</strong>
+                        @else
+                            <flux:select wire:model="reciprocalType" size="sm" class="!w-auto">
+                                @foreach ($reciprocalOptions as $opt)
+                                    <flux:select.option value="{{ $opt }}">{{ \Illuminate\Support\Str::of($types[$opt]['label'])->replaceLast(' of', '') }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
                         @endif
-                        {{ $recipTo->name }}?
-                    </flux:text>
+                        <flux:text size="sm" variant="subtle">of</flux:text>
+                        <strong>{{ $recipTo->name }}</strong>
+                        <flux:text size="sm" variant="subtle">?</flux:text>
+                    </div>
 
-                    <div class="flex flex-wrap items-end gap-3 mt-3">
-                        @if (count($reciprocalOptions) > 1)
-                            <flux:field>
-                                <flux:label>Relationship</flux:label>
-                                <flux:select wire:model="reciprocalType">
-                                    @foreach ($reciprocalOptions as $opt)
-                                        <flux:select.option value="{{ $opt }}">{{ $types[$opt]['label'] }}</flux:select.option>
-                                    @endforeach
-                                </flux:select>
-                            </flux:field>
-                        @endif
+                    <div class="flex flex-wrap items-center gap-2 mt-3">
                         <flux:button type="button" variant="primary" icon="plus" wire:click="confirmReciprocal">
                             Yes, add it
                         </flux:button>
