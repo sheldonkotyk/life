@@ -9,9 +9,9 @@
         <flux:button variant="primary" icon="plus" wire:click="create">Add person</flux:button>
     </div>
 
-    {{-- Add / edit modal --}}
+    {{-- Add modal --}}
     <flux:modal name="member-form" @close="resetForm" class="md:w-[40rem]">
-        <flux:heading size="lg">{{ $editingId ? 'Edit member' : 'Add family member' }}</flux:heading>
+        <flux:heading size="lg">Add family member</flux:heading>
 
         <form wire:submit="save" class="grid grid-cols-1 sm:grid-cols-6 gap-4 mt-4 items-end">
             <div class="sm:col-span-4">
@@ -41,139 +41,13 @@
                 </flux:field>
             </div>
 
-            @if ($editingId)
-                <div class="sm:col-span-6">
-                    <flux:subheading>Allergies</flux:subheading>
-                    <div class="flex flex-wrap items-center gap-2 mt-2">
-                        @foreach ($this->editingAllergies as $allergy)
-                            <flux:badge color="red">
-                                {{ $allergy->food }}
-                                <flux:badge.close wire:click="removePreference({{ $allergy->id }})" />
-                            </flux:badge>
-                        @endforeach
-                        @if ($this->editingAllergies->isEmpty())
-                            <flux:text size="sm" variant="subtle">No allergies added.</flux:text>
-                        @endif
-                    </div>
-                    <div class="flex gap-2 mt-2">
-                        <flux:input
-                            wire:model="newAllergy"
-                            wire:keydown.enter.prevent="addAllergy"
-                            placeholder="e.g. peanuts"
-                            size="sm"
-                        />
-                        <flux:button type="button" size="sm" variant="ghost" wire:click="addAllergy">Add</flux:button>
-                    </div>
-                </div>
-            @endif
-
-            <div class="sm:col-span-6">
-                <flux:subheading>Daily macro targets <span class="text-zinc-400 font-normal">(optional)</span></flux:subheading>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
-                    <flux:field>
-                        <flux:label>Calories</flux:label>
-                        <flux:input type="number" step="1" min="0" wire:model="targetCalories" placeholder="2000" />
-                    </flux:field>
-                    <flux:field>
-                        <flux:label>Protein (g)</flux:label>
-                        <flux:input type="number" step="0.1" min="0" wire:model="targetProteinG" />
-                    </flux:field>
-                    <flux:field>
-                        <flux:label>Carbs (g)</flux:label>
-                        <flux:input type="number" step="0.1" min="0" wire:model="targetCarbsG" />
-                    </flux:field>
-                    <flux:field>
-                        <flux:label>Fat (g)</flux:label>
-                        <flux:input type="number" step="0.1" min="0" wire:model="targetFatG" />
-                    </flux:field>
-                </div>
-            </div>
-
             <div class="sm:col-span-6 flex justify-end gap-2">
                 <flux:modal.close>
                     <flux:button type="button" variant="ghost">Cancel</flux:button>
                 </flux:modal.close>
-                <flux:button type="submit" variant="primary">
-                    {{ $editingId ? 'Update' : 'Add' }}
-                </flux:button>
+                <flux:button type="submit" variant="primary">Add</flux:button>
             </div>
         </form>
-
-        @if ($editingId && ($attendanceMember = $this->editingMember))
-            @php
-                $canEditAttendance = $this->canEditAttendance($attendanceMember);
-                $dayLabels = ['sun' => 'Sun', 'mon' => 'Mon', 'tue' => 'Tue', 'wed' => 'Wed', 'thu' => 'Thu', 'fri' => 'Fri', 'sat' => 'Sat'];
-                $slots = \App\Livewire\Family::SLOTS;
-            @endphp
-            <div class="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-700">
-                <flux:subheading>Default weekly attendance</flux:subheading>
-                <flux:text size="sm" variant="subtle" class="mt-1 mb-3">
-                    Meals {{ $attendanceMember->name }} is typically there for. Used as the starting point for meal planning.
-                    @unless ($canEditAttendance)
-                        Only admins or {{ $attendanceMember->name }} can edit this.
-                    @endunless
-                </flux:text>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
-                                <th class="text-left p-2 font-semibold text-zinc-600 dark:text-zinc-300 w-20">Day</th>
-                                @foreach ($slots as $slot)
-                                    @php
-                                        $allSlotIn = collect(\App\Livewire\Family::DAYS)
-                                            ->every(fn ($d) => $attendanceMember->attendsByDefault($d, $slot));
-                                    @endphp
-                                    <th class="text-center p-2 font-semibold text-zinc-600 dark:text-zinc-300 capitalize">
-                                        <div>{{ $slot }}</div>
-                                        @if ($canEditAttendance)
-                                            <flux:button size="xs" class="mt-1" variant="ghost"
-                                                wire:click="setSlotAttendance('{{ $slot }}', {{ $allSlotIn ? 'false' : 'true' }})">
-                                                {{ $allSlotIn ? 'Skip all' : 'All in' }}
-                                            </flux:button>
-                                        @endif
-                                    </th>
-                                @endforeach
-                                @if ($canEditAttendance)
-                                    <th class="text-right p-2 font-semibold text-zinc-500 w-20">All day</th>
-                                @endif
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($dayLabels as $dayKey => $dayLabel)
-                                @php
-                                    $allIn = collect($slots)->every(fn ($s) => $attendanceMember->attendsByDefault($dayKey, $s));
-                                @endphp
-                                <tr class="border-b border-zinc-100 dark:border-zinc-800 last:border-b-0">
-                                    <td class="p-2 font-semibold">{{ $dayLabel }}</td>
-                                    @foreach ($slots as $slot)
-                                        @php $attending = $attendanceMember->attendsByDefault($dayKey, $slot); @endphp
-                                        <td class="p-2 text-center">
-                                            <label class="inline-flex items-center justify-center {{ $canEditAttendance ? 'cursor-pointer' : '' }}">
-                                                <flux:checkbox
-                                                    wire:key="default-{{ $attendanceMember->id }}-{{ $dayKey }}-{{ $slot }}-{{ $attending ? '1' : '0' }}"
-                                                    :checked="$attending"
-                                                    :disabled="! $canEditAttendance"
-                                                    wire:click="toggleAttendance('{{ $dayKey }}', '{{ $slot }}')"
-                                                />
-                                            </label>
-                                        </td>
-                                    @endforeach
-                                    @if ($canEditAttendance)
-                                        <td class="p-2 text-right">
-                                            <flux:button size="xs" variant="ghost"
-                                                wire:click="setDayAttendance('{{ $dayKey }}', {{ $allIn ? 'false' : 'true' }})">
-                                                {{ $allIn ? 'Skip' : 'All in' }}
-                                            </flux:button>
-                                        </td>
-                                    @endif
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        @endif
     </flux:modal>
 
     {{-- Member cards --}}
@@ -201,32 +75,40 @@
                             </flux:text>
                         </div>
                     </div>
-                    <div class="flex gap-1">
-                        @if ($m->user && $canManage)
-                            @if ($isAdmin)
-                                <flux:button
-                                    size="sm"
-                                    variant="ghost"
-                                    wire:click="removeAdmin({{ $m->user->id }})"
-                                    wire:confirm="Remove admin from {{ $m->name }}?"
-                                >
-                                    Remove admin
-                                </flux:button>
-                            @else
-                                <flux:button
-                                    size="sm"
-                                    variant="ghost"
-                                    wire:click="makeAdmin({{ $m->user->id }})"
-                                >
-                                    Make admin
-                                </flux:button>
+                    <flux:dropdown align="end">
+                        <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" />
+                        <flux:menu>
+                            <flux:menu.item icon="pencil-square" :href="route('member.profile', $m)" wire:navigate>Edit</flux:menu.item>
+                            @if ($m->user && $canManage)
+                                @if ($isAdmin)
+                                    <flux:menu.item
+                                        icon="shield-check"
+                                        wire:click="removeAdmin({{ $m->user->id }})"
+                                        wire:confirm="Remove admin from {{ $m->name }}?"
+                                    >
+                                        Remove admin
+                                    </flux:menu.item>
+                                @else
+                                    <flux:menu.item
+                                        icon="shield-check"
+                                        wire:click="makeAdmin({{ $m->user->id }})"
+                                    >
+                                        Make admin
+                                    </flux:menu.item>
+                                @endif
                             @endif
-                        @endif
-                        <flux:button size="sm" variant="ghost" wire:click="edit({{ $m->id }})">Edit</flux:button>
-                        @unless ($m->user)
-                            <flux:button size="sm" variant="danger" wire:click="delete({{ $m->id }})" wire:confirm="Remove {{ $m->name }}?">Remove</flux:button>
-                        @endunless
-                    </div>
+                            @unless ($m->user)
+                                <flux:menu.item
+                                    icon="trash"
+                                    variant="danger"
+                                    wire:click="delete({{ $m->id }})"
+                                    wire:confirm="Remove {{ $m->name }}?"
+                                >
+                                    Remove
+                                </flux:menu.item>
+                            @endunless
+                        </flux:menu>
+                    </flux:dropdown>
                 </div>
 
                 <div class="mt-4 space-y-3">
@@ -283,10 +165,20 @@
                                 @endif
                             </div>
                         </div>
-                        <div class="flex gap-1">
-                            <flux:button size="sm" variant="ghost" wire:click="edit({{ $m->id }})">Edit</flux:button>
-                            <flux:button size="sm" variant="danger" wire:click="delete({{ $m->id }})" wire:confirm="Remove {{ $m->name }}?">Remove</flux:button>
-                        </div>
+                        <flux:dropdown align="end">
+                            <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" />
+                            <flux:menu>
+                                <flux:menu.item icon="pencil-square" :href="route('member.profile', $m)" wire:navigate>Edit</flux:menu.item>
+                                <flux:menu.item
+                                    icon="trash"
+                                    variant="danger"
+                                    wire:click="delete({{ $m->id }})"
+                                    wire:confirm="Remove {{ $m->name }}?"
+                                >
+                                    Remove
+                                </flux:menu.item>
+                            </flux:menu>
+                        </flux:dropdown>
                     </div>
 
                     <div class="mt-4 space-y-3">

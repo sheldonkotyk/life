@@ -10,23 +10,54 @@ class FamilyTree extends Component
 {
     protected const PARENT_TYPES = ['father', 'mother', 'step-father', 'step-mother'];
 
-    protected const PARTNER_TYPES = ['husband', 'wife', 'boyfriend', 'girlfriend'];
+    protected const PARTNER_TYPES = ['husband', 'wife', 'boyfriend', 'girlfriend', 'fiance', 'fiancee'];
+
+    protected const GUEST_ALLOWED_TYPES = ['boyfriend', 'girlfriend', 'fiance', 'fiancee'];
+
+    public ?int $focusMemberId = null;
 
     public function render()
     {
         $householdId = auth()->user()->household_id;
 
-        $members = FamilyMember::where('household_id', $householdId)
-            ->where('is_guest', false)
+        $allMembers = FamilyMember::where('household_id', $householdId)
+            ->with('user')
             ->orderBy('name')
             ->get()
             ->keyBy('id');
 
+        $allIds = $allMembers->keys()->all();
+
+        $allConnections = FamilyConnection::whereIn('from_member_id', $allIds)
+            ->whereIn('to_member_id', $allIds)
+            ->get();
+
+        // Guests only appear if linked to a non-guest via boyfriend/girlfriend/fiancé(e).
+        $allowedGuestIds = [];
+        foreach ($allConnections as $c) {
+            if (! in_array($c->type, self::GUEST_ALLOWED_TYPES, true)) {
+                continue;
+            }
+            $from = $allMembers[$c->from_member_id] ?? null;
+            $to = $allMembers[$c->to_member_id] ?? null;
+            if (! $from || ! $to) {
+                continue;
+            }
+            if ($from->is_guest && ! $to->is_guest) {
+                $allowedGuestIds[$from->id] = true;
+            }
+            if ($to->is_guest && ! $from->is_guest) {
+                $allowedGuestIds[$to->id] = true;
+            }
+        }
+
+        $members = $allMembers->filter(fn ($m) => ! $m->is_guest || isset($allowedGuestIds[$m->id]));
+
         $memberIds = $members->keys()->all();
 
-        $connections = FamilyConnection::whereIn('from_member_id', $memberIds)
-            ->whereIn('to_member_id', $memberIds)
-            ->get();
+        $connections = $allConnections->filter(
+            fn ($c) => in_array($c->from_member_id, $memberIds, true) && in_array($c->to_member_id, $memberIds, true)
+        );
 
         // Build parent/child maps from parental connection types only.
         $parentsOf = [];
@@ -102,14 +133,77 @@ class FamilyTree extends Component
             }
         }
 
-        // Group by generation, sort each row by name for stability.
+        // Identify immediate family of the current user: self, partners, parents, children.
+        $selfId = $members->firstWhere('user_id', auth()->id())?->id;
+        $immediateIds = [];
+        if ($selfId !== null) {
+            $immediateIds[$selfId] = true;
+            foreach ($parentsOf[$selfId] ?? [] as $pid) {
+                $immediateIds[$pid] = true;
+            }
+            foreach ($childrenOf[$selfId] ?? [] as $cid) {
+                $immediateIds[$cid] = true;
+            }
+            foreach ($partnerPairs as [$a, $b]) {
+                if ($a === $selfId) {
+                    $immediateIds[$b] = true;
+                } elseif ($b === $selfId) {
+                    $immediateIds[$a] = true;
+                }
+            }
+        }
+
+        // Map each guest to the non-guest household member they're connected to.
+        $guestsOf = [];
+        $guestHostId = [];
+        foreach ($partnerPairs as [$a, $b]) {
+            $aMember = $members[$a] ?? null;
+            $bMember = $members[$b] ?? null;
+            if (! $aMember || ! $bMember) {
+                continue;
+            }
+            if ($aMember->is_guest && ! $bMember->is_guest) {
+                $guestsOf[$b][] = $aMember;
+                $guestHostId[$a] = $b;
+            } elseif ($bMember->is_guest && ! $aMember->is_guest) {
+                $guestsOf[$a][] = $bMember;
+                $guestHostId[$b] = $a;
+            }
+        }
+
+        // Group by generation, sort each row by name for stability. Guests render
+        // attached to their host, not as standalone columns.
         $rows = [];
         foreach ($members as $m) {
+            if ($m->is_guest && isset($guestHostId[$m->id])) {
+                continue;
+            }
             $rows[$generation[$m->id]][] = $m;
         }
         ksort($rows);
         foreach ($rows as &$row) {
             usort($row, fn ($a, $b) => strcmp($a->name, $b->name));
+
+            if ($this->focusMemberId === null) {
+                continue;
+            }
+
+            $focusIndex = null;
+            foreach ($row as $i => $m) {
+                if ($m->id === $this->focusMemberId) {
+                    $focusIndex = $i;
+                    break;
+                }
+            }
+
+            if ($focusIndex === null) {
+                continue;
+            }
+
+            $focused = $row[$focusIndex];
+            $others = array_values(array_filter($row, fn ($m) => $m->id !== $this->focusMemberId));
+            $half = intdiv(count($others), 2);
+            $row = array_merge(array_slice($others, 0, $half), [$focused], array_slice($others, $half));
         }
         unset($row);
 
@@ -118,6 +212,8 @@ class FamilyTree extends Component
             'rows' => $rows,
             'parentsOf' => $parentsOf,
             'childrenOf' => $childrenOf,
+            'immediateIds' => $immediateIds,
+            'guestsOf' => $guestsOf,
         ]);
     }
 }

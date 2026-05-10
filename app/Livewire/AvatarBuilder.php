@@ -2,7 +2,10 @@
 
 namespace App\Livewire;
 
+use App\Models\FamilyMember;
+use App\Models\User;
 use App\Support\Avatar;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 
@@ -10,9 +13,34 @@ class AvatarBuilder extends Component
 {
     public array $config = [];
 
-    public function mount(): void
+    public ?FamilyMember $member = null;
+
+    public function mount(?FamilyMember $member = null): void
     {
-        $this->config = Avatar::normalize(auth()->user()->avatar_config);
+        $this->member = $member;
+        $this->authorizeOrFail();
+        $this->config = Avatar::normalize($this->target()->avatar_config);
+    }
+
+    private function target(): Model
+    {
+        if ($this->member) {
+            return $this->member->user ?: $this->member;
+        }
+
+        return auth()->user();
+    }
+
+    private function authorizeOrFail(): void
+    {
+        if (! $this->member) {
+            return;
+        }
+
+        $user = auth()->user();
+        abort_unless($this->member->household_id === $user->household_id, 404);
+        $isAdmin = $user->canManageHousehold($user->household);
+        abort_unless($isAdmin || $this->member->user_id === $user->id, 403);
     }
 
     public function setSkin(string $color): void
@@ -127,14 +155,17 @@ class AvatarBuilder extends Component
 
     public function save(): void
     {
-        $user = auth()->user();
-        $user->update(['avatar_config' => Avatar::normalize($this->config)]);
+        $this->authorizeOrFail();
 
-        // If switching to built avatar, drop the uploaded image so it doesn't shadow the SVG.
-        $existing = $user->getRawOriginal('avatar');
-        if ($existing && ! str_starts_with($existing, 'http')) {
-            Storage::disk('public')->delete($existing);
-            $user->update(['avatar' => null]);
+        $target = $this->target();
+        $target->update(['avatar_config' => Avatar::normalize($this->config)]);
+
+        if ($target instanceof User) {
+            $existing = $target->getRawOriginal('avatar');
+            if ($existing && ! str_starts_with($existing, 'http')) {
+                Storage::disk('public')->delete($existing);
+                $target->update(['avatar' => null]);
+            }
         }
 
         $this->dispatch('avatar-updated');
@@ -143,7 +174,9 @@ class AvatarBuilder extends Component
 
     public function clearBuiltAvatar(): void
     {
-        auth()->user()->update(['avatar_config' => null]);
+        $this->authorizeOrFail();
+
+        $this->target()->update(['avatar_config' => null]);
         $this->config = Avatar::defaultConfig();
         $this->dispatch('avatar-updated');
         session()->flash('status', 'Built avatar removed.');
@@ -152,6 +185,7 @@ class AvatarBuilder extends Component
     public function render()
     {
         return view('livewire.avatar-builder', [
+            'hasBuilt' => ! empty($this->target()->avatar_config),
             'opts' => [
                 'skinTones' => Avatar::SKIN_TONES,
                 'bodyTypes' => Avatar::BODY_TYPES,

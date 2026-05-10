@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Avatar;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,12 +15,29 @@ class FamilyMember extends Model
     protected $casts = [
         'is_child' => 'bool',
         'is_guest' => 'bool',
+        'birthday' => 'date',
         'default_attendance' => 'array',
+        'avatar_config' => 'array',
         'target_calories' => 'float',
         'target_protein_g' => 'float',
         'target_carbs_g' => 'float',
         'target_fat_g' => 'float',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (FamilyMember $member) {
+            if ($member->is_guest && empty($member->avatar_config)) {
+                $member->avatar_config = Avatar::randomConfig();
+            }
+        });
+
+        static::updating(function (FamilyMember $member) {
+            if ($member->is_guest && empty($member->avatar_config)) {
+                $member->avatar_config = Avatar::randomConfig();
+            }
+        });
+    }
 
     public function household(): BelongsTo
     {

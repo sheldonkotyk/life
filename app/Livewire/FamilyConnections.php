@@ -18,6 +18,13 @@ class FamilyConnections extends Component
 
     public ?int $focusMemberId = null;
 
+    public string $view = 'tree';
+
+    public function setView(string $view): void
+    {
+        $this->view = in_array($view, ['list', 'tree'], true) ? $view : 'list';
+    }
+
     public ?int $reciprocalFromId = null;
 
     public ?int $reciprocalToId = null;
@@ -58,6 +65,8 @@ class FamilyConnections extends Component
 
         $this->reset(['type', 'notes', 'toId']);
         $this->type = 'father';
+
+        $this->modal('connection-form')->close();
     }
 
     protected function suggestReciprocal(int $fromId, int $toId, string $type): void
@@ -147,11 +156,12 @@ class FamilyConnections extends Component
         $householdId = auth()->user()->household_id;
 
         $members = FamilyMember::where('household_id', $householdId)
+            ->with('user')
             ->orderBy('is_guest')
             ->orderBy('name')
             ->get();
 
-        $connectionsQuery = FamilyConnection::with('fromMember', 'toMember')
+        $connectionsQuery = FamilyConnection::with('fromMember.user', 'toMember.user')
             ->whereHas('fromMember', fn ($q) => $q->where('household_id', $householdId));
 
         if ($this->focusMemberId) {

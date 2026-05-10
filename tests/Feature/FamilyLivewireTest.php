@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Family;
+use App\Livewire\MemberProfile;
 use App\Models\FamilyMember;
 use App\Models\FoodPreference;
 use Livewire\Livewire;
@@ -26,12 +27,11 @@ it('validates required name on save', function () {
         ->assertHasErrors(['name' => 'required']);
 });
 
-it('edits an existing member', function () {
+it('edits an existing member via the profile page', function () {
     $user = loginUser();
     $member = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'Old', 'color' => '#000000']);
 
-    Livewire::test(Family::class)
-        ->call('edit', $member->id)
+    Livewire::test(MemberProfile::class, ['member' => $member])
         ->assertSet('name', 'Old')
         ->set('name', 'New')
         ->call('save');

@@ -8,7 +8,7 @@
             <flux:button type="button" variant="primary" wire:click="save" class="flex-1">Save avatar</flux:button>
             <flux:button type="button" variant="ghost" icon="sparkles" wire:click="randomize" title="Randomize" aria-label="Randomize" />
         </div>
-        @if (auth()->user()->hasBuiltAvatar())
+        @if ($hasBuilt)
             <flux:button type="button" size="xs" variant="ghost" wire:click="clearBuiltAvatar"
                 wire:confirm="Remove built avatar and revert to uploaded image?">
                 Remove built avatar

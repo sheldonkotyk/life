@@ -21,7 +21,6 @@
         <flux:tabs wire:model.live="tab">
             <flux:tab name="people">People</flux:tab>
             <flux:tab name="connections">Connections</flux:tab>
-            <flux:tab name="tree">Tree</flux:tab>
             <flux:tab name="settings">Settings</flux:tab>
             <flux:tab name="danger">Leave / delete</flux:tab>
         </flux:tabs>
@@ -32,10 +31,6 @@
 
         <flux:tab.panel name="connections">
             <livewire:family-connections />
-        </flux:tab.panel>
-
-        <flux:tab.panel name="tree">
-            <livewire:family-tree />
         </flux:tab.panel>
 
         <flux:tab.panel name="settings" class="space-y-6">

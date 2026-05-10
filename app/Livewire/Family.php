@@ -10,12 +10,6 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class Family extends Component
 {
-    public const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-
-    public const SLOTS = ['breakfast', 'lunch', 'dinner'];
-
-    public ?int $editingId = null;
-
     public string $name = '';
 
     public string $color = '#6366f1';
@@ -26,14 +20,6 @@ class Family extends Component
 
     public string $notes = '';
 
-    public ?float $targetCalories = null;
-
-    public ?float $targetProteinG = null;
-
-    public ?float $targetCarbsG = null;
-
-    public ?float $targetFatG = null;
-
     public ?int $prefMemberId = null;
 
     public string $prefFood = '';
@@ -41,8 +27,6 @@ class Family extends Component
     public string $prefType = 'like';
 
     public string $prefNotes = '';
-
-    public string $newAllergy = '';
 
     public function rules(): array
     {
@@ -52,36 +36,21 @@ class Family extends Component
             'isChild' => ['boolean'],
             'isGuest' => ['boolean'],
             'notes' => ['nullable', 'string', 'max:500'],
-            'targetCalories' => ['nullable', 'numeric', 'min:0'],
-            'targetProteinG' => ['nullable', 'numeric', 'min:0'],
-            'targetCarbsG' => ['nullable', 'numeric', 'min:0'],
-            'targetFatG' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 
     public function save(): void
     {
         $this->validate();
-        $data = [
+
+        FamilyMember::create([
             'household_id' => auth()->user()->household_id,
             'name' => $this->name,
             'color' => $this->color,
             'is_child' => $this->isChild,
             'is_guest' => $this->isGuest,
             'notes' => $this->notes ?: null,
-            'target_calories' => $this->targetCalories ?: null,
-            'target_protein_g' => $this->targetProteinG ?: null,
-            'target_carbs_g' => $this->targetCarbsG ?: null,
-            'target_fat_g' => $this->targetFatG ?: null,
-        ];
-
-        if ($this->editingId) {
-            FamilyMember::where('id', $this->editingId)
-                ->where('household_id', auth()->user()->household_id)
-                ->update($data);
-        } else {
-            FamilyMember::create($data);
-        }
+        ]);
 
         $this->resetForm();
         $this->modal('member-form')->close();
@@ -93,45 +62,15 @@ class Family extends Component
         $this->modal('member-form')->show();
     }
 
-    public function edit(int $id): void
-    {
-        $m = $this->householdMembers()->findOrFail($id);
-        $this->editingId = $m->id;
-        $this->name = $m->name;
-        $this->color = $m->color;
-        $this->isChild = $m->is_child;
-        $this->isGuest = $m->is_guest;
-        $this->notes = $m->notes ?? '';
-        $this->targetCalories = $m->target_calories;
-        $this->targetProteinG = $m->target_protein_g;
-        $this->targetCarbsG = $m->target_carbs_g;
-        $this->targetFatG = $m->target_fat_g;
-        $this->modal('member-form')->show();
-    }
-
     public function delete(int $id): void
     {
-        $this->householdMembers()->where('id', $id)->delete();
-        $this->resetForm();
+        $this->householdMembers()->where('id', $id)->whereNull('user_id')->delete();
     }
 
     public function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'color', 'isChild', 'isGuest', 'notes', 'targetCalories', 'targetProteinG', 'targetCarbsG', 'targetFatG', 'newAllergy']);
+        $this->reset(['name', 'color', 'isChild', 'isGuest', 'notes']);
         $this->color = '#6366f1';
-    }
-
-    public function getEditingAllergiesProperty()
-    {
-        if (! $this->editingId) {
-            return collect();
-        }
-
-        return FoodPreference::whereHas('familyMember', fn ($q) => $q->where('household_id', auth()->user()->household_id))
-            ->where('family_member_id', $this->editingId)
-            ->where('type', 'allergy')
-            ->orderBy('food')
-            ->get();
     }
 
     public function addPreference(int $memberId): void
@@ -153,26 +92,6 @@ class Family extends Component
         $this->prefMemberId = null;
     }
 
-    public function addAllergy(): void
-    {
-        if (! $this->editingId) {
-            return;
-        }
-
-        $this->validate([
-            'newAllergy' => ['required', 'string', 'max:80'],
-        ]);
-
-        $member = $this->householdMembers()->findOrFail($this->editingId);
-        FoodPreference::create([
-            'family_member_id' => $member->id,
-            'food' => trim($this->newAllergy),
-            'type' => 'allergy',
-        ]);
-
-        $this->newAllergy = '';
-    }
-
     public function removePreference(int $prefId): void
     {
         FoodPreference::whereHas('familyMember', fn ($q) => $q->where('household_id', auth()->user()->household_id))
@@ -186,70 +105,6 @@ class Family extends Component
         $this->prefFood = '';
         $this->prefType = 'like';
         $this->prefNotes = '';
-    }
-
-    public function canEditAttendance(?FamilyMember $member): bool
-    {
-        if (! $member) {
-            return false;
-        }
-
-        $user = auth()->user();
-
-        if ($user->canManageHousehold($user->household)) {
-            return true;
-        }
-
-        return $member->user_id === $user->id;
-    }
-
-    public function getEditingMemberProperty(): ?FamilyMember
-    {
-        if (! $this->editingId) {
-            return null;
-        }
-
-        return $this->householdMembers()->find($this->editingId);
-    }
-
-    public function toggleAttendance(string $day, string $slot): void
-    {
-        $member = $this->editingMember;
-        abort_unless($member && $this->canEditAttendance($member), 403);
-
-        if (! in_array($day, self::DAYS, true) || ! in_array($slot, self::SLOTS, true)) {
-            return;
-        }
-
-        $member->setDefaultAttendance($day, $slot, ! $member->attendsByDefault($day, $slot));
-    }
-
-    public function setDayAttendance(string $day, bool $value): void
-    {
-        $member = $this->editingMember;
-        abort_unless($member && $this->canEditAttendance($member), 403);
-
-        if (! in_array($day, self::DAYS, true)) {
-            return;
-        }
-
-        foreach (self::SLOTS as $slot) {
-            $member->setDefaultAttendance($day, $slot, $value);
-        }
-    }
-
-    public function setSlotAttendance(string $slot, bool $value): void
-    {
-        $member = $this->editingMember;
-        abort_unless($member && $this->canEditAttendance($member), 403);
-
-        if (! in_array($slot, self::SLOTS, true)) {
-            return;
-        }
-
-        foreach (self::DAYS as $day) {
-            $member->setDefaultAttendance($day, $slot, $value);
-        }
     }
 
     public function makeAdmin(int $userId): void

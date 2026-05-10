@@ -1,6 +1,6 @@
 @props([
     'member',
-    'size' => 'md', // xs, sm, md, lg
+    'size' => 'md', // xs, sm, md, lg, xl, 2xl
 ])
 
 @php
@@ -9,20 +9,22 @@
         'sm' => 'w-5 h-5 text-[10px]',
         'md' => 'w-7 h-7 text-xs',
         'lg' => 'w-10 h-10 text-base',
+        'xl' => 'w-16 h-16 text-lg',
+        '2xl' => 'w-20 h-20 text-xl',
     ];
     $classes = $sizes[$size] ?? $sizes['md'];
     $initial = strtoupper(mb_substr($member->name, 0, 1));
     $user = $member->user;
-    $hasBuilt = $user?->hasBuiltAvatar();
-    $avatarUrl = $hasBuilt ? null : $user?->avatar;
+    $builtConfig = $user?->hasBuiltAvatar() ? $user->avatar_config : ($member->avatar_config ?? null);
+    $avatarUrl = $builtConfig ? null : $user?->avatar;
 @endphp
 
-@if ($hasBuilt)
+@if ($builtConfig)
     <span
         {{ $attributes->merge(['class' => "$classes rounded-full overflow-hidden ring-1 ring-white shadow-sm shrink-0 inline-block"]) }}
         title="{{ $member->name }}"
     >
-        <x-avatar-headshot :config="$user->avatar_config" class="w-full h-full" />
+        <x-avatar-headshot :config="$builtConfig" class="w-full h-full" />
     </span>
 @elseif ($avatarUrl)
     <img

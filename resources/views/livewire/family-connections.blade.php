@@ -11,10 +11,14 @@
             Add at least two family members or guests to start linking them.
         </flux:callout>
     @else
-        <flux:card>
-            <flux:heading size="sm">Add a connection</flux:heading>
-            <form wire:submit="add" class="grid grid-cols-1 sm:grid-cols-12 gap-3 mt-3 items-end">
-                <div class="sm:col-span-3">
+        <flux:modal name="connection-form" class="md:w-[32rem]">
+            <form wire:submit="add" class="space-y-4">
+                <div>
+                    <flux:heading size="lg">Add a connection</flux:heading>
+                    <flux:text size="sm" variant="subtle">Pick two people and how they're related.</flux:text>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <flux:field>
                         <flux:label>Person</flux:label>
                         <flux:select wire:model="fromId">
@@ -25,9 +29,7 @@
                             @endforeach
                         </flux:select>
                     </flux:field>
-                </div>
 
-                <div class="sm:col-span-3">
                     <flux:field>
                         <flux:label>Is the</flux:label>
                         <flux:select wire:model="type">
@@ -36,9 +38,7 @@
                             @endforeach
                         </flux:select>
                     </flux:field>
-                </div>
 
-                <div class="sm:col-span-3">
                     <flux:field>
                         <flux:label>Of</flux:label>
                         <flux:select wire:model="toId">
@@ -51,20 +51,21 @@
                         <flux:error name="toId" />
                         <flux:error name="fromId" />
                     </flux:field>
-                </div>
 
-                <div class="sm:col-span-3">
                     <flux:field>
                         <flux:label>Notes</flux:label>
                         <flux:input wire:model="notes" placeholder="optional" />
                     </flux:field>
                 </div>
 
-                <div class="sm:col-span-12 flex justify-end">
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button type="button" variant="ghost">Cancel</flux:button>
+                    </flux:modal.close>
                     <flux:button type="submit" variant="primary" icon="plus">Connect</flux:button>
                 </div>
             </form>
-        </flux:card>
+        </flux:modal>
 
         @if ($reciprocalFromId && $reciprocalToId)
             @php
@@ -104,28 +105,42 @@
             @endif
         @endif
 
-        <div class="flex flex-wrap items-center gap-2">
-            <flux:text size="sm" variant="subtle">Filter:</flux:text>
-            <flux:button size="sm" variant="{{ $focusMemberId === null ? 'primary' : 'ghost' }}" wire:click="focus(null)">Everyone</flux:button>
-            @foreach ($members as $m)
-                <flux:button size="sm" variant="{{ $focusMemberId === $m->id ? 'primary' : 'ghost' }}" wire:click="focus({{ $m->id }})">
-                    <span class="inline-block size-2 rounded-full mr-1" style="background-color: {{ $m->color }}"></span>
-                    {{ $m->name }}
-                </flux:button>
-            @endforeach
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <flux:button.group>
+                    <flux:button size="sm" icon="share" variant="{{ $view === 'tree' ? 'primary' : 'ghost' }}" wire:click="setView('tree')">Tree</flux:button>
+                    <flux:button size="sm" icon="list-bullet" variant="{{ $view === 'list' ? 'primary' : 'ghost' }}" wire:click="setView('list')">List</flux:button>
+                </flux:button.group>
+                <flux:modal.trigger name="connection-form">
+                    <flux:button size="sm" variant="primary" icon="plus">Add connection</flux:button>
+                </flux:modal.trigger>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <flux:text size="sm" variant="subtle">Filter:</flux:text>
+                <flux:button size="sm" variant="{{ $focusMemberId === null ? 'primary' : 'ghost' }}" wire:click="focus(null)">Everyone</flux:button>
+                @foreach ($members as $m)
+                    <flux:button size="sm" variant="{{ $focusMemberId === $m->id ? 'primary' : 'ghost' }}" wire:click="focus({{ $m->id }})">
+                        <x-avatar :member="$m" size="xs" class="mr-1" />
+                        {{ $m->name }}
+                    </flux:button>
+                @endforeach
+            </div>
         </div>
 
+        @if ($view === 'tree')
+            <livewire:family-tree :focus-member-id="$focusMemberId" :key="'family-tree-'.($focusMemberId ?? 'all')" />
+        @else
         <flux:card>
             @if ($pairs->isEmpty())
                 <flux:text variant="subtle">
-                    No connections yet. Add one above to map out who's related to whom.
+                    No connections yet. Use "Add connection" to map out who's related to whom.
                 </flux:text>
             @else
                 <ul class="divide-y divide-zinc-100 dark:divide-zinc-800">
                     @foreach ($pairs as $c)
                         <li class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                             <div class="flex items-center gap-2 min-w-0">
-                                <span class="inline-block size-3 rounded-full" style="background-color: {{ $c->fromMember->color }}"></span>
+                                <x-avatar :member="$c->fromMember" size="sm" />
                                 <span class="font-medium">{{ $c->fromMember->name }}</span>
                                 @if ($c->fromMember->is_guest)
                                     <flux:badge size="sm" color="zinc">guest</flux:badge>
@@ -133,7 +148,7 @@
                                 <flux:text size="sm" variant="subtle" class="mx-1">
                                     {{ \App\Models\FamilyConnection::TYPES[$c->type]['label'] ?? $c->type }}
                                 </flux:text>
-                                <span class="inline-block size-3 rounded-full" style="background-color: {{ $c->toMember->color }}"></span>
+                                <x-avatar :member="$c->toMember" size="sm" />
                                 <span class="font-medium">{{ $c->toMember->name }}</span>
                                 @if ($c->toMember->is_guest)
                                     <flux:badge size="sm" color="zinc">guest</flux:badge>
@@ -154,5 +169,6 @@
                 </ul>
             @endif
         </flux:card>
+        @endif
     @endif
 </div>
