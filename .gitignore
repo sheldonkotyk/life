@@ -18,6 +18,7 @@
 /public/storage
 /storage/*.key
 /storage/app/database
+/storage/backups
 /storage/pail
 /vendor
 _ide_helper.php

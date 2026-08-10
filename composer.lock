@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "17028d714c8288bf05132a6a7e35f4f3",
+    "content-hash": "d1325ce128df88ad23ff4a99198f93fe",
     "packages": [
         {
             "name": "brick/math",
@@ -7132,6 +7132,69 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "abigah/db-sync-from-prod",
+            "version": "v0.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/abigah/db-sync-from-prod.git",
+                "reference": "7c9906ecbcf43b0825a7ddba15617a24619f0c92"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/abigah/db-sync-from-prod/zipball/7c9906ecbcf43b0825a7ddba15617a24619f0c92",
+                "reference": "7c9906ecbcf43b0825a7ddba15617a24619f0c92",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "mockery/mockery": "^1.6",
+                "orchestra/testbench": "^8.0 || ^9.0 || ^10.0",
+                "pestphp/pest": "^3.0",
+                "pestphp/pest-plugin-laravel": "^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Abigah\\DbSyncFromProd\\DbSyncFromProdServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Abigah\\DbSyncFromProd\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Abigah\\DbSyncFromProd\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Sheldon Kotyk",
+                    "email": "sheldon.kotyk@p2c.com"
+                }
+            ],
+            "description": "Artisan command to sync the local database from a production database over an SSH tunnel.",
+            "support": {
+                "source": "https://github.com/abigah/db-sync-from-prod/tree/v0.3.0",
+                "issues": "https://github.com/abigah/db-sync-from-prod/issues"
+            },
+            "time": "2026-06-22T17:37:17+00:00"
+        },
         {
             "name": "amphp/amp",
             "version": "v3.1.3",
