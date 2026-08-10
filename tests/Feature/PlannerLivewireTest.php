@@ -107,6 +107,10 @@ it('ignores skipped-ingredient ids that do not belong to the chosen recipe', fun
 });
 
 it('does not offer leftovers from the same date and slot being edited', function () {
+    // availableLeftovers only looks at the week around today, so pin the clock
+    // to keep the fixture dates inside that window.
+    $this->travelTo('2026-05-04 12:00:00');
+
     $user = loginUser();
     MealPlan::create([
         'household_id' => $user->household_id,
