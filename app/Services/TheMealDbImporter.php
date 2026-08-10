@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 class TheMealDbImporter
 {
     private string $base;
+
     private string $version;
 
     public function __construct()
@@ -31,9 +32,12 @@ class TheMealDbImporter
             foreach ($this->mealsByLetter($letter) as $meal) {
                 $this->upsertMeal($meal);
                 $count++;
-                if ($onMeal) $onMeal($meal, $count);
+                if ($onMeal) {
+                    $onMeal($meal, $count);
+                }
             }
         }
+
         return $count;
     }
 
@@ -43,8 +47,11 @@ class TheMealDbImporter
         foreach ($this->mealsByLetter($letter) as $meal) {
             $this->upsertMeal($meal);
             $count++;
-            if ($onMeal) $onMeal($meal, $count);
+            if ($onMeal) {
+                $onMeal($meal, $count);
+            }
         }
+
         return $count;
     }
 
@@ -58,20 +65,25 @@ class TheMealDbImporter
         foreach ($meals as $meal) {
             $this->upsertMeal($meal);
             $count++;
-            if ($onMeal) $onMeal($meal, $count);
+            if ($onMeal) {
+                $onMeal($meal, $count);
+            }
         }
+
         return $count;
     }
 
     public function mealsByLetter(string $letter): array
     {
         $res = Http::get("{$this->base}/search.php", ['f' => $letter])->json();
+
         return $res['meals'] ?? [];
     }
 
     public function lookup(string $id): ?array
     {
         $res = Http::get("{$this->base}/lookup.php", ['i' => $id])->json();
+
         return $res['meals'][0] ?? null;
     }
 
@@ -82,18 +94,22 @@ class TheMealDbImporter
     public function filterByIngredients(array $ingredients): array
     {
         $clean = array_values(array_filter(array_map(
-            fn($i) => str_replace(' ', '_', trim((string) $i)),
+            fn ($i) => str_replace(' ', '_', trim((string) $i)),
             $ingredients
         )));
-        if (empty($clean)) return [];
+        if (empty($clean)) {
+            return [];
+        }
 
         $res = Http::get("{$this->base}/filter.php", ['i' => implode(',', $clean)])->json();
+
         return is_array($res['meals'] ?? null) ? $res['meals'] : [];
     }
 
     public function importById(string $id): ?GlobalRecipe
     {
         $meal = $this->lookup($id);
+
         return $meal ? $this->upsertMeal($meal) : null;
     }
 
@@ -118,7 +134,9 @@ class TheMealDbImporter
             $rows = [];
             for ($i = 1; $i <= 20; $i++) {
                 $name = trim((string) ($meal["strIngredient{$i}"] ?? ''));
-                if ($name === '') continue;
+                if ($name === '') {
+                    continue;
+                }
                 $rows[] = [
                     'global_recipe_id' => $recipe->id,
                     'name' => $name,
@@ -128,7 +146,9 @@ class TheMealDbImporter
                     'updated_at' => now(),
                 ];
             }
-            if ($rows) GlobalRecipeIngredient::insert($rows);
+            if ($rows) {
+                GlobalRecipeIngredient::insert($rows);
+            }
 
             return $recipe;
         });
@@ -136,8 +156,11 @@ class TheMealDbImporter
 
     private function parseTags(?string $tags): ?array
     {
-        if (! $tags) return null;
+        if (! $tags) {
+            return null;
+        }
         $list = array_filter(array_map('trim', explode(',', $tags)));
+
         return $list ? array_values($list) : null;
     }
 }

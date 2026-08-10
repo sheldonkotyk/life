@@ -43,12 +43,14 @@ class Recipe extends Model
                 $sum[$key] += (float) ($ing->{$key} ?? 0);
             }
         }
+
         return $sum;
     }
 
     public function macrosPerServing(): array
     {
         $servings = max(1, (int) $this->servings);
-        return array_map(fn($v) => round($v / $servings, 1), $this->macroTotals());
+
+        return array_map(fn ($v) => round($v / $servings, 1), $this->macroTotals());
     }
 }

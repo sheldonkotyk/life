@@ -39,13 +39,13 @@ it('captures timezone from the apple endpoint when provided and not already set'
         'timezone' => 'America/Los_Angeles',
     ])->assertOk();
 
-    expect(\App\Models\User::where('apple_sub', 'tz-sub')->first()->timezone)
+    expect(User::where('apple_sub', 'tz-sub')->first()->timezone)
         ->toBe('America/Los_Angeles');
 });
 
 it('does not overwrite an existing timezone via the apple endpoint', function () {
-    $h = \App\Models\Household::create(['name' => 'H']);
-    $u = \App\Models\User::create([
+    $h = Household::create(['name' => 'H']);
+    $u = User::create([
         'household_id' => $h->id,
         'apple_sub' => 'tz-sub-2',
         'name' => 'X',
@@ -90,12 +90,12 @@ it('reuses an existing user on repeat apple login', function () {
 });
 
 it('devToken returns 404 outside local environment', function () {
-    app()->detectEnvironment(fn() => 'production');
+    app()->detectEnvironment(fn () => 'production');
     $this->postJson('/api/auth/dev-token', ['email' => 'x@example.test'])->assertStatus(404);
 });
 
 it('devToken returns a token for known email in local env', function () {
-    app()->detectEnvironment(fn() => 'local');
+    app()->detectEnvironment(fn () => 'local');
     $household = Household::create(['name' => 'H']);
     User::create([
         'household_id' => $household->id,
@@ -109,7 +109,7 @@ it('devToken returns a token for known email in local env', function () {
 });
 
 it('devToken 404s for unknown email', function () {
-    app()->detectEnvironment(fn() => 'local');
+    app()->detectEnvironment(fn () => 'local');
     $this->postJson('/api/auth/dev-token', ['email' => 'nope@example.test'])->assertStatus(404);
 });
 

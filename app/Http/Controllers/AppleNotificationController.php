@@ -18,6 +18,7 @@ class AppleNotificationController extends Controller
 
         if (! is_string($token) || $token === '') {
             Log::warning('apple.notification.missing_payload', ['body' => $request->all()]);
+
             return response()->json(['ok' => false], 400);
         }
 
@@ -25,12 +26,14 @@ class AppleNotificationController extends Controller
             $keys = Cache::remember('apple.auth.keys', now()->addHour(), function () {
                 $response = Http::timeout(5)->get('https://appleid.apple.com/auth/keys');
                 $response->throw();
+
                 return $response->json();
             });
 
             $decoded = JWT::decode($token, JWK::parseKeySet($keys));
         } catch (\Throwable $e) {
             Log::warning('apple.notification.invalid_jwt', ['error' => $e->getMessage()]);
+
             return response()->json(['ok' => false], 401);
         }
 
@@ -42,6 +45,7 @@ class AppleNotificationController extends Controller
                 'iss' => $decoded->iss ?? null,
                 'aud' => $decoded->aud ?? null,
             ]);
+
             return response()->json(['ok' => false], 401);
         }
 

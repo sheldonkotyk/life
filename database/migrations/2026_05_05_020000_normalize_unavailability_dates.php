@@ -9,10 +9,8 @@ return new class extends Migration
     {
         DB::table('family_member_unavailabilities')
             ->where('date', 'like', '% %')
-            ->update(['date' => DB::raw("substr(date, 1, 10)")]);
+            ->update(['date' => DB::raw('substr(date, 1, 10)')]);
     }
 
-    public function down(): void
-    {
-    }
+    public function down(): void {}
 };

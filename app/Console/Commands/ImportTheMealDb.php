@@ -32,6 +32,7 @@ class ImportTheMealDb extends Command
 
         $this->newLine();
         $this->info("Imported/updated {$count} recipes.");
+
         return self::SUCCESS;
     }
 }

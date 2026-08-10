@@ -20,6 +20,7 @@ function recipeWith(int $householdId, array $ingredients, int $servings = 4): Re
             'sort_order' => $i,
         ], $ing));
     }
+
     return $recipe->fresh('ingredients');
 }
 

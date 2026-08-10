@@ -5,7 +5,6 @@ use App\Models\Household;
 use App\Models\User;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
-use Mockery\MockInterface;
 
 it('renders the login page with apple disabled when no client id', function () {
     config(['services.apple.client_id' => null]);
@@ -18,7 +17,7 @@ it('renders the login page with apple enabled when configured', function () {
 });
 
 it('exposes dev users on the login page in local env', function () {
-    app()->detectEnvironment(fn() => 'local');
+    app()->detectEnvironment(fn () => 'local');
     $h = Household::create(['name' => 'H']);
     User::create(['household_id' => $h->id, 'name' => 'Devo', 'email' => 'devo@example.test']);
 
@@ -83,7 +82,7 @@ it('logs out and redirects to login', function () {
 });
 
 it('dev-login logs in the user in local env', function () {
-    app()->detectEnvironment(fn() => 'local');
+    app()->detectEnvironment(fn () => 'local');
     $h = Household::create(['name' => 'H']);
     $user = User::create(['household_id' => $h->id, 'name' => 'D', 'email' => 'd@example.test']);
 
@@ -93,7 +92,7 @@ it('dev-login logs in the user in local env', function () {
 });
 
 it('dev-login 404s outside local env', function () {
-    app()->detectEnvironment(fn() => 'production');
+    app()->detectEnvironment(fn () => 'production');
     $h = Household::create(['name' => 'H']);
     $user = User::create(['household_id' => $h->id, 'name' => 'D', 'email' => 'd@example.test']);
 

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\RateLimiter;
 
 beforeEach(function () {
     Mail::fake();
-    RateLimiter::clear('magic-link:' . sha1('new@example.test|127.0.0.1'));
+    RateLimiter::clear('magic-link:'.sha1('new@example.test|127.0.0.1'));
 });
 
 it('shows the magic-link email field on login', function () {
@@ -40,14 +40,14 @@ it('validates the email on request', function () {
 });
 
 it('signs in a brand-new user via magic link and provisions a household', function () {
-    $token = 'tok_' . str_repeat('a', 44);
+    $token = 'tok_'.str_repeat('a', 44);
     MagicLoginToken::create([
         'email' => 'fresh@example.test',
         'token_hash' => hash('sha256', $token),
         'expires_at' => now()->addMinutes(15),
     ]);
 
-    $this->get('/auth/magic/' . $token)->assertRedirect('/');
+    $this->get('/auth/magic/'.$token)->assertRedirect('/');
 
     $user = User::where('email', 'fresh@example.test')->first();
     expect($user)->not->toBeNull()
@@ -67,14 +67,14 @@ it('signs in an existing user via magic link without creating a new household', 
         'email' => 'ex@example.test',
     ]);
 
-    $token = 'tok_' . str_repeat('b', 44);
+    $token = 'tok_'.str_repeat('b', 44);
     MagicLoginToken::create([
         'email' => 'ex@example.test',
         'token_hash' => hash('sha256', $token),
         'expires_at' => now()->addMinutes(15),
     ]);
 
-    $this->get('/auth/magic/' . $token)->assertRedirect('/');
+    $this->get('/auth/magic/'.$token)->assertRedirect('/');
 
     expect(auth()->id())->toBe($existing->id)
         ->and(User::where('email', 'ex@example.test')->count())->toBe(1)
@@ -82,19 +82,19 @@ it('signs in an existing user via magic link without creating a new household', 
 });
 
 it('rejects an expired magic-link token', function () {
-    $token = 'tok_' . str_repeat('c', 44);
+    $token = 'tok_'.str_repeat('c', 44);
     MagicLoginToken::create([
         'email' => 'late@example.test',
         'token_hash' => hash('sha256', $token),
         'expires_at' => now()->subMinute(),
     ]);
 
-    $this->get('/auth/magic/' . $token)->assertRedirect('/login');
+    $this->get('/auth/magic/'.$token)->assertRedirect('/login');
     expect(auth()->check())->toBeFalse();
 });
 
 it('rejects a reused magic-link token', function () {
-    $token = 'tok_' . str_repeat('d', 44);
+    $token = 'tok_'.str_repeat('d', 44);
     MagicLoginToken::create([
         'email' => 'used@example.test',
         'token_hash' => hash('sha256', $token),
@@ -102,7 +102,7 @@ it('rejects a reused magic-link token', function () {
         'used_at' => now(),
     ]);
 
-    $this->get('/auth/magic/' . $token)->assertRedirect('/login');
+    $this->get('/auth/magic/'.$token)->assertRedirect('/login');
     expect(auth()->check())->toBeFalse();
 });
 
@@ -115,7 +115,7 @@ it('signs in via the emailed code', function () {
     $code = '123456';
     MagicLoginToken::create([
         'email' => 'codeuser@example.test',
-        'token_hash' => hash('sha256', 'unused-token-' . str_repeat('x', 36)),
+        'token_hash' => hash('sha256', 'unused-token-'.str_repeat('x', 36)),
         'code_hash' => hash('sha256', $code),
         'expires_at' => now()->addMinutes(15),
     ]);
@@ -131,7 +131,7 @@ it('signs in via the emailed code', function () {
 it('rejects a wrong magic code', function () {
     MagicLoginToken::create([
         'email' => 'codeuser@example.test',
-        'token_hash' => hash('sha256', 'tk-' . str_repeat('y', 45)),
+        'token_hash' => hash('sha256', 'tk-'.str_repeat('y', 45)),
         'code_hash' => hash('sha256', '123456'),
         'expires_at' => now()->addMinutes(15),
     ]);
@@ -149,14 +149,14 @@ it('attaches the pending invite household when verifying a magic link', function
     $this->startSession();
     $this->post('/login/invite', ['_token' => csrf_token(), 'invite_code' => 'INV12345']);
 
-    $token = 'tok_' . str_repeat('e', 44);
+    $token = 'tok_'.str_repeat('e', 44);
     MagicLoginToken::create([
         'email' => 'invitee@example.test',
         'token_hash' => hash('sha256', $token),
         'expires_at' => now()->addMinutes(15),
     ]);
 
-    $this->get('/auth/magic/' . $token)->assertRedirect('/');
+    $this->get('/auth/magic/'.$token)->assertRedirect('/');
 
     $user = User::where('email', 'invitee@example.test')->first();
     expect($user->household_id)->toBe($h->id);

@@ -56,7 +56,9 @@ class RecipeBrowser extends Component
     public function addIngredient(): void
     {
         $value = trim($this->ingredientInput);
-        if ($value === '') return;
+        if ($value === '') {
+            return;
+        }
         if (! in_array($value, $this->ingredients, true)) {
             $this->ingredients[] = $value;
         }
@@ -69,7 +71,7 @@ class RecipeBrowser extends Component
     {
         $this->ingredients = array_values(array_filter(
             $this->ingredients,
-            fn($i) => $i !== $name
+            fn ($i) => $i !== $name
         ));
         $this->discovered = [];
         $this->resetPage();
@@ -77,7 +79,9 @@ class RecipeBrowser extends Component
 
     public function discoverOnline(TheMealDbImporter $importer): void
     {
-        if (empty($this->ingredients)) return;
+        if (empty($this->ingredients)) {
+            return;
+        }
 
         $this->discovering = true;
         try {
@@ -89,7 +93,7 @@ class RecipeBrowser extends Component
 
             $this->discovered = array_values(array_filter(
                 $stubs,
-                fn($s) => ! in_array($s['idMeal'], $existing, true)
+                fn ($s) => ! in_array($s['idMeal'], $existing, true)
             ));
         } finally {
             $this->discovering = false;
@@ -101,7 +105,7 @@ class RecipeBrowser extends Component
         $importer->importById($externalId);
         $this->discovered = array_values(array_filter(
             $this->discovered,
-            fn($s) => $s['idMeal'] !== $externalId
+            fn ($s) => $s['idMeal'] !== $externalId
         ));
     }
 
@@ -153,9 +157,9 @@ class RecipeBrowser extends Component
     {
         $recipes = GlobalRecipe::query()
             ->search($this->search)
-            ->when($this->category, fn($q) => $q->where('category', $this->category))
-            ->when($this->area, fn($q) => $q->where('area', $this->area))
-            ->when($this->ingredients, fn($q) => $q->withAllIngredients($this->ingredients))
+            ->when($this->category, fn ($q) => $q->where('category', $this->category))
+            ->when($this->area, fn ($q) => $q->where('area', $this->area))
+            ->when($this->ingredients, fn ($q) => $q->withAllIngredients($this->ingredients))
             ->orderBy('name')
             ->paginate(24);
 

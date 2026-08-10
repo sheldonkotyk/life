@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Household;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class HouseholdController extends Controller
 {
@@ -24,22 +26,25 @@ class HouseholdController extends Controller
     {
         $data = $request->validate(['name' => ['required', 'string', 'max:120']]);
         $request->user()->household()->update($data);
+
         return response()->json(['ok' => true]);
     }
 
     public function rotateInvite(Request $request): JsonResponse
     {
         $hh = $request->user()->household;
-        $hh->invite_code = strtoupper(\Illuminate\Support\Str::random(8));
+        $hh->invite_code = strtoupper(Str::random(8));
         $hh->save();
+
         return response()->json(['invite_code' => $hh->invite_code]);
     }
 
     public function join(Request $request): JsonResponse
     {
         $data = $request->validate(['invite_code' => ['required', 'string']]);
-        $hh = \App\Models\Household::where('invite_code', strtoupper($data['invite_code']))->firstOrFail();
+        $hh = Household::where('invite_code', strtoupper($data['invite_code']))->firstOrFail();
         $request->user()->joinHousehold($hh);
+
         return response()->json(['ok' => true, 'household_id' => $hh->id]);
     }
 }

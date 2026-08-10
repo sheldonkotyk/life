@@ -26,6 +26,7 @@ class AppleClientSecret extends Command
 
         if (! is_readable($keyPath)) {
             $this->error("Cannot read key file: {$keyPath}");
+
             return self::FAILURE;
         }
 
@@ -49,7 +50,7 @@ class AppleClientSecret extends Command
         $this->newLine();
         $this->line($jwt);
         $this->newLine();
-        $this->info('Expires ' . date('Y-m-d H:i:s', $exp));
+        $this->info('Expires '.date('Y-m-d H:i:s', $exp));
 
         return self::SUCCESS;
     }

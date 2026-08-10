@@ -23,23 +23,29 @@ class GlobalRecipe extends Model
     {
         foreach ($ingredients as $needle) {
             $needle = trim((string) $needle);
-            if ($needle === '') continue;
-            $q->whereHas('ingredients', fn($q2) => $q2->where('name', 'like', "%{$needle}%"));
+            if ($needle === '') {
+                continue;
+            }
+            $q->whereHas('ingredients', fn ($q2) => $q2->where('name', 'like', "%{$needle}%"));
         }
+
         return $q;
     }
 
     public function scopeSearch(Builder $q, ?string $term): Builder
     {
         $term = trim((string) $term);
-        if ($term === '') return $q;
+        if ($term === '') {
+            return $q;
+        }
 
-        $like = '%' . $term . '%';
+        $like = '%'.$term.'%';
+
         return $q->where(function ($q) use ($like) {
             $q->where('name', 'like', $like)
-              ->orWhere('category', 'like', $like)
-              ->orWhere('area', 'like', $like)
-              ->orWhereHas('ingredients', fn($q2) => $q2->where('name', 'like', $like));
+                ->orWhere('category', 'like', $like)
+                ->orWhere('area', 'like', $like)
+                ->orWhereHas('ingredients', fn ($q2) => $q2->where('name', 'like', $like));
         });
     }
 }

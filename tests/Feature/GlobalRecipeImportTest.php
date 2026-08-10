@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
 it('upserts a meal from TheMealDB payload', function () {
-    $importer = new TheMealDbImporter();
+    $importer = new TheMealDbImporter;
 
     $recipe = $importer->upsertMeal([
         'idMeal' => '52772',
@@ -122,7 +122,7 @@ it('discovers and imports meals via the v2 multi-ingredient filter', function ()
         ]),
     ]);
 
-    $importer = new TheMealDbImporter();
+    $importer = new TheMealDbImporter;
 
     $stubs = $importer->filterByIngredients(['chicken', 'rice']);
     expect($stubs)->toHaveCount(2);
@@ -139,6 +139,6 @@ it('fetches meals by letter from the API', function () {
         ]),
     ]);
 
-    $importer = new TheMealDbImporter();
+    $importer = new TheMealDbImporter;
     expect($importer->mealsByLetter('a'))->toHaveCount(1);
 });

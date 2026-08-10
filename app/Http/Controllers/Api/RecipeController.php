@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\FamilyMember;
 use App\Models\Recipe;
 use App\Models\RecipeIngredient;
 use App\Models\RecipeMemberRating;
@@ -22,6 +23,7 @@ class RecipeController extends Controller
     public function show(Request $request, Recipe $recipe): JsonResponse
     {
         $this->authorize($request, $recipe);
+
         return response()->json($recipe->load('ingredients', 'ratings'));
     }
 
@@ -30,6 +32,7 @@ class RecipeController extends Controller
         $data = $this->validateData($request);
         $recipe = Recipe::create([...$this->scalarData($data), 'household_id' => $request->user()->household_id]);
         $this->syncRelated($recipe, $data);
+
         return response()->json($recipe->load('ingredients', 'ratings'), 201);
     }
 
@@ -39,6 +42,7 @@ class RecipeController extends Controller
         $data = $this->validateData($request);
         $recipe->update($this->scalarData($data));
         $this->syncRelated($recipe, $data);
+
         return response()->json($recipe->load('ingredients', 'ratings'));
     }
 
@@ -46,6 +50,7 @@ class RecipeController extends Controller
     {
         $this->authorize($request, $recipe);
         $recipe->delete();
+
         return response()->json(['ok' => true]);
     }
 
@@ -88,7 +93,7 @@ class RecipeController extends Controller
         if (isset($data['ratings'])) {
             $recipe->ratings()->delete();
             foreach ($data['ratings'] as $r) {
-                $member = \App\Models\FamilyMember::find($r['family_member_id']);
+                $member = FamilyMember::find($r['family_member_id']);
                 if ($member && $member->household_id === $recipe->household_id) {
                     RecipeMemberRating::create([...$r, 'recipe_id' => $recipe->id]);
                 }

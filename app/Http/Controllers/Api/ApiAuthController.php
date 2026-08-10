@@ -38,7 +38,7 @@ class ApiAuthController extends Controller
         }
 
         $user = User::firstOrNew(['apple_sub' => $sub]);
-        $user->email = $data['email'] ?? $user->email ?? ($sub . '@apple.private');
+        $user->email = $data['email'] ?? $user->email ?? ($sub.'@apple.private');
         $user->name = $data['name'] ?? $user->name ?? 'Apple User';
         if (isset($data['timezone']) && ! $user->timezone) {
             $user->timezone = $data['timezone'];
@@ -46,7 +46,7 @@ class ApiAuthController extends Controller
 
         $newHousehold = null;
         if (! $user->household_id) {
-            $newHousehold = Household::create(['name' => $user->name . "'s Household"]);
+            $newHousehold = Household::create(['name' => $user->name."'s Household"]);
         }
         $user->save();
 
@@ -92,6 +92,7 @@ class ApiAuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
+
         return response()->json(['ok' => true]);
     }
 
@@ -102,6 +103,7 @@ class ApiAuthController extends Controller
             return null;
         }
         $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+
         return $payload['sub'] ?? null;
     }
 }

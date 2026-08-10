@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Household;
-use App\Models\User;
 
 it('shows the authenticated household', function () {
     $user = loginApiUser();
