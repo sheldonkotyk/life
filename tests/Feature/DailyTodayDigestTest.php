@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Notifications\DailyTodayDigest;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 it('sends to a user when their local time matches the preference', function () {
@@ -16,6 +17,7 @@ it('sends to a user when their local time matches the preference', function () {
         'timezone' => 'America/Toronto',
         'email' => 'a@example.test',
         'daily_today_email_at' => '09:00',
+        'daily_today_email_enabled' => true,
         'notification_preferences' => ['site' => true, 'email' => true, 'push' => false],
     ]);
 
@@ -23,6 +25,23 @@ it('sends to a user when their local time matches the preference', function () {
 
     Notification::assertSentTo($user, DailyTodayDigest::class);
     expect((string) $user->fresh()->daily_today_email_last_sent_on)->toContain('2026-05-10');
+});
+
+it('retries with a delay so a locked database does not drop the digest', function () {
+    $notification = new DailyTodayDigest(1);
+
+    expect($notification->tries)->toBeGreaterThan(1)
+        ->and($notification->backoff())->not->toBeEmpty()
+        ->and($notification->backoff()[0])->toBeGreaterThan(0);
+});
+
+it('logs the user when delivery fails for good', function () {
+    Log::spy();
+
+    (new DailyTodayDigest(42))->failed(new RuntimeException('database is locked'));
+
+    Log::shouldHaveReceived('error')
+        ->withArgs(fn (string $message, array $context) => $context['user_id'] === 42);
 });
 
 it('does not send before the preferred time', function () {
@@ -34,6 +53,7 @@ it('does not send before the preferred time', function () {
         'timezone' => 'America/Toronto',
         'email' => 'a@example.test',
         'daily_today_email_at' => '09:00',
+        'daily_today_email_enabled' => true,
     ]);
 
     $this->artisan('notifications:send-daily-digest')->assertSuccessful();
@@ -50,6 +70,7 @@ it('does not send twice in the same local day', function () {
         'timezone' => 'America/Toronto',
         'email' => 'a@example.test',
         'daily_today_email_at' => '09:00',
+        'daily_today_email_enabled' => true,
     ]);
 
     $this->artisan('notifications:send-daily-digest');
@@ -71,7 +92,39 @@ it('does not send once the window after the preferred time has passed', function
         'timezone' => 'America/Toronto',
         'email' => 'a@example.test',
         'daily_today_email_at' => '09:00',
+        'daily_today_email_enabled' => true,
     ]);
+
+    $this->artisan('notifications:send-daily-digest')->assertSuccessful();
+
+    Notification::assertNothingSentTo($user);
+});
+
+it('does not send to a user who has opted out, even with a time still set', function () {
+    Notification::fake();
+    CarbonImmutable::setTestNow('2026-05-10 13:02:00');
+
+    $user = loginUser();
+    $user->update([
+        'timezone' => 'America/Toronto',
+        'email' => 'a@example.test',
+        'daily_today_email_at' => '09:00',
+        'daily_today_email_enabled' => false,
+    ]);
+
+    $this->artisan('notifications:send-daily-digest')->assertSuccessful();
+
+    Notification::assertNothingSentTo($user);
+});
+
+it('does not send to a brand new user who has never opted in', function () {
+    Notification::fake();
+    CarbonImmutable::setTestNow('2026-05-10 13:02:00');
+
+    $user = loginUser();
+    $user->update(['timezone' => 'America/Toronto', 'email' => 'a@example.test']);
+
+    expect($user->fresh()->daily_today_email_enabled)->toBeFalse();
 
     $this->artisan('notifications:send-daily-digest')->assertSuccessful();
 
@@ -103,6 +156,7 @@ it('respects the email channel preference', function () {
         'timezone' => 'America/Toronto',
         'email' => 'a@example.test',
         'daily_today_email_at' => '09:00',
+        'daily_today_email_enabled' => true,
         'notification_preferences' => ['site' => true, 'email' => false, 'push' => false],
     ]);
 
@@ -120,6 +174,7 @@ it('respects different timezones for separate users', function () {
         'timezone' => 'America/Toronto',
         'email' => 'a@example.test',
         'daily_today_email_at' => '09:00',
+        'daily_today_email_enabled' => true,
     ]);
 
     $london = User::create([
@@ -128,6 +183,7 @@ it('respects different timezones for separate users', function () {
         'email' => 'b@example.test',
         'timezone' => 'Europe/London',
         'daily_today_email_at' => '14:00',
+        'daily_today_email_enabled' => true,
     ]);
 
     $this->artisan('notifications:send-daily-digest');

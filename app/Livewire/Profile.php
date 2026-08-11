@@ -74,6 +74,7 @@ class Profile extends Component
         if ($value === '') {
             auth()->user()->update([
                 'daily_today_email_at' => null,
+                'daily_today_email_enabled' => false,
                 'daily_today_email_last_sent_on' => null,
             ]);
             $this->dailyTodayEmailAt = null;
@@ -85,6 +86,7 @@ class Profile extends Component
 
         auth()->user()->update([
             'daily_today_email_at' => $value,
+            'daily_today_email_enabled' => true,
             'daily_today_email_last_sent_on' => null,
         ]);
     }

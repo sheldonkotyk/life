@@ -25,12 +25,13 @@ class SendDailyTodayDigests extends Command
         $sent = 0;
 
         User::query()
+            ->where('daily_today_email_enabled', true)
             ->whereNotNull('daily_today_email_at')
             ->whereNotNull('email')
             ->chunkById(200, function ($users) use ($now, &$sent) {
                 foreach ($users as $user) {
                     if ($this->shouldSend($user, $now)) {
-                        $user->notify(new DailyTodayDigest);
+                        $user->notify(new DailyTodayDigest($user->id));
                         $user->forceFill([
                             'daily_today_email_last_sent_on' => CarbonImmutable::now($user->getTimezone())->toDateString(),
                         ])->saveQuietly();

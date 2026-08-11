@@ -94,3 +94,24 @@ it('saves preference toggles from profile', function () {
     expect($user->fresh()->wantsNotificationOn('email'))->toBeFalse()
         ->and($user->fresh()->wantsNotificationOn('site'))->toBeTrue();
 });
+
+it('records the daily email opt-in when a time is chosen from profile', function () {
+    $user = loginUser();
+
+    Livewire::test(Profile::class)
+        ->set('dailyTodayEmailAt', '07:30');
+
+    expect($user->fresh()->daily_today_email_enabled)->toBeTrue()
+        ->and((string) $user->fresh()->daily_today_email_at)->toContain('07:30');
+});
+
+it('records the daily email opt-out when it is turned off from profile', function () {
+    $user = loginUser();
+    $user->update(['daily_today_email_at' => '07:30', 'daily_today_email_enabled' => true]);
+
+    Livewire::test(Profile::class)
+        ->call('clearDailyTodayEmail');
+
+    expect($user->fresh()->daily_today_email_enabled)->toBeFalse()
+        ->and($user->fresh()->daily_today_email_at)->toBeNull();
+});

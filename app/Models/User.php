@@ -34,6 +34,7 @@ class User extends Authenticatable
             'birthday' => 'date',
             'avatar_config' => 'array',
             'notification_preferences' => 'array',
+            'daily_today_email_enabled' => 'boolean',
         ];
     }
 
