@@ -67,6 +67,6 @@ class SendDailyTodayDigests extends Command
             return false;
         }
 
-        return $localNow->diffInMinutes($preferred) < self::WINDOW_MINUTES;
+        return $preferred->diffInMinutes($localNow) < self::WINDOW_MINUTES;
     }
 }

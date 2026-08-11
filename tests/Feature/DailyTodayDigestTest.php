@@ -62,6 +62,38 @@ it('does not send twice in the same local day', function () {
     Notification::assertSentToTimes($user, DailyTodayDigest::class, 1);
 });
 
+it('does not send once the window after the preferred time has passed', function () {
+    Notification::fake();
+    CarbonImmutable::setTestNow('2026-05-10 19:02:00'); // 15:02 Toronto, six hours late
+
+    $user = loginUser();
+    $user->update([
+        'timezone' => 'America/Toronto',
+        'email' => 'a@example.test',
+        'daily_today_email_at' => '09:00',
+    ]);
+
+    $this->artisan('notifications:send-daily-digest')->assertSuccessful();
+
+    Notification::assertNothingSentTo($user);
+});
+
+it('does not send to a user who has not chosen a daily email time', function () {
+    Notification::fake();
+    CarbonImmutable::setTestNow('2026-05-10 13:02:00');
+
+    $user = loginUser();
+    $user->update([
+        'timezone' => 'America/Toronto',
+        'email' => 'a@example.test',
+        'daily_today_email_at' => null,
+    ]);
+
+    $this->artisan('notifications:send-daily-digest')->assertSuccessful();
+
+    Notification::assertNothingSentTo($user);
+});
+
 it('respects the email channel preference', function () {
     Notification::fake();
     CarbonImmutable::setTestNow('2026-05-10 13:02:00');
