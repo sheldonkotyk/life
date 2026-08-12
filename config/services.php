@@ -49,4 +49,10 @@ return [
         'private_key' => env('APPLE_PRIVATE_KEY'),
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_CALENDAR_REDIRECT_URI', '/auth/google/calendar/callback'),
+    ],
+
 ];

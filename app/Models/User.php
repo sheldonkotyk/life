@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,7 +15,8 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable;
+    /** @use HasFactory<UserFactory> */
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $guarded = [];
 
@@ -118,6 +122,11 @@ class User extends Authenticatable
         return $this->hasOne(FamilyMember::class);
     }
 
+    public function googleCalendarConnections(): HasMany
+    {
+        return $this->hasMany(GoogleCalendarConnection::class);
+    }
+
     public function isAdminOf(Household $household): bool
     {
         $membership = $this->households()->where('households.id', $household->id)->first();
@@ -137,6 +146,12 @@ class User extends Authenticatable
 
     protected static function booted(): void
     {
+        static::deleting(function (User $user): void {
+            $user->googleCalendarConnections()->each(
+                fn (GoogleCalendarConnection $connection) => $connection->delete(),
+            );
+        });
+
         static::saved(function (User $user) {
             if ($user->wasChanged('name')) {
                 $user->familyMember()->update(['name' => $user->name]);
