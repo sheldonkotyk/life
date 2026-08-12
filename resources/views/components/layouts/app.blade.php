@@ -28,6 +28,7 @@
                 'recipes' => ['label' => 'Recipes', 'icon' => 'book-open'],
                 'shopping' => ['label' => 'Shopping', 'icon' => 'shopping-cart'],
                 'lists' => ['label' => 'Lists', 'icon' => 'check-circle'],
+                'bookings' => ['label' => 'Bookings', 'icon' => 'calendar-days'],
                 'tracker' => ['label' => 'Tracker', 'icon' => 'chart-bar'],
             ];
         @endphp

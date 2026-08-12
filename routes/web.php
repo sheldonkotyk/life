@@ -4,11 +4,13 @@ use App\Http\Controllers\AppleNotificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\TimezoneController;
+use App\Livewire\BookingSettings;
 use App\Livewire\HouseholdSettings;
 use App\Livewire\Lists;
 use App\Livewire\MemberProfile;
 use App\Livewire\Planner;
 use App\Livewire\Profile;
+use App\Livewire\PublicBookingPage;
 use App\Livewire\RecipeBrowser;
 use App\Livewire\Recipes;
 use App\Livewire\ShoppingList;
@@ -19,6 +21,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return auth()->check() ? redirect('/today') : view('landing');
 })->name('home');
+
+Route::get('/meet/{bookingPage:slug}', PublicBookingPage::class)->name('booking.show');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::get('/join/{code}', [AuthController::class, 'joinViaLink'])->name('login.invite.link');
@@ -49,6 +53,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/shopping', ShoppingList::class);
     Route::get('/tracker', Tracker::class);
     Route::get('/lists', Lists::class)->name('lists');
+    Route::get('/bookings', BookingSettings::class)->name('booking.settings');
     Route::redirect('/availability', '/meal-plan?mode=attendance');
     Route::get('/profile', Profile::class)->name('profile');
     Route::get('/household', HouseholdSettings::class)->name('household');
