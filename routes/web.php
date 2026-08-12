@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AppleNotificationController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\TimezoneController;
 use App\Livewire\HouseholdSettings;
 use App\Livewire\Lists;
@@ -34,6 +35,10 @@ Route::post('/dev-login/{user}', [AuthController::class, 'devLogin']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
 Route::middleware('auth')->group(function () {
+    Route::get('/auth/google/calendar/redirect', [GoogleCalendarController::class, 'redirect'])
+        ->name('google-calendar.redirect');
+    Route::get('/auth/google/calendar/callback', [GoogleCalendarController::class, 'callback'])
+        ->name('google-calendar.callback');
     Route::get('/today', Today::class)->name('today');
     Route::redirect('/tonight', '/today');
     Route::get('/meal-plan', Planner::class)->name('meal-plan');

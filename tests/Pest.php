@@ -1,7 +1,11 @@
 <?php
 
+use App\Models\GoogleCalendarConnection;
+use App\Models\GoogleCalendarToken;
 use App\Models\Household;
 use App\Models\User;
+use App\TokenProvider;
+use CleaniqueCoders\TokenVault\Enums\Type;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -36,6 +40,33 @@ function loginApiUser(?Household $household = null): User
     Sanctum::actingAs($user);
 
     return $user;
+}
+
+function connectGoogleCalendar(
+    User $user,
+    string $email = 'calendar@example.test',
+    string $accessToken = 'access-token',
+    string $refreshToken = 'refresh-token',
+    ?string $googleUserId = null,
+): GoogleCalendarConnection {
+    $connection = GoogleCalendarConnection::factory()->for($user)->create([
+        'google_user_id' => $googleUserId ?? fake()->uuid(),
+        'google_email' => $email,
+    ]);
+    $token = new GoogleCalendarToken([
+        'provider' => TokenProvider::Google,
+        'type' => Type::OAuthToken,
+        'expires_at' => now()->addHour(),
+    ]);
+    $token->tokenable()->associate($connection);
+    $token->setCredentials($accessToken, $refreshToken, [
+        'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
+        'https://www.googleapis.com/auth/calendar.events',
+        'https://www.googleapis.com/auth/calendar.freebusy',
+    ]);
+    $token->save();
+
+    return $connection->load('oauthToken');
 }
 
 function appleJwt(string $sub, array $extra = []): string
