@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\GoogleCalendar;
+use App\Services\GoogleCalendarClient;
 use App\Socialite\AppleProvider;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -11,7 +13,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->bind(GoogleCalendar::class, GoogleCalendarClient::class);
     }
 
     public function boot(): void
