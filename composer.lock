@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "503a3c454a2d2bdda2c63e50006b86ca",
+    "content-hash": "e21e504e7a5879682ef3b24c2769e0a2",
     "packages": [
         {
             "name": "brick/math",
@@ -7352,16 +7352,16 @@
     "packages-dev": [
         {
             "name": "abigah/db-sync-from-prod",
-            "version": "v0.3.0",
+            "version": "v0.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/abigah/db-sync-from-prod.git",
-                "reference": "7c9906ecbcf43b0825a7ddba15617a24619f0c92"
+                "reference": "cba059d70920ea2d7ab868d866a0c7756812ff56"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/abigah/db-sync-from-prod/zipball/7c9906ecbcf43b0825a7ddba15617a24619f0c92",
-                "reference": "7c9906ecbcf43b0825a7ddba15617a24619f0c92",
+                "url": "https://api.github.com/repos/abigah/db-sync-from-prod/zipball/cba059d70920ea2d7ab868d866a0c7756812ff56",
+                "reference": "cba059d70920ea2d7ab868d866a0c7756812ff56",
                 "shasum": ""
             },
             "require": {
@@ -7408,10 +7408,10 @@
             ],
             "description": "Artisan command to sync the local database from a production database over an SSH tunnel.",
             "support": {
-                "source": "https://github.com/abigah/db-sync-from-prod/tree/v0.3.0",
+                "source": "https://github.com/abigah/db-sync-from-prod/tree/v0.4.1",
                 "issues": "https://github.com/abigah/db-sync-from-prod/issues"
             },
-            "time": "2026-06-22T17:37:17+00:00"
+            "time": "2026-08-13T01:22:38+00:00"
         },
         {
             "name": "amphp/amp",

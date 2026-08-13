@@ -22,7 +22,7 @@
         "socialiteproviders/apple": "^5.10"
     },
     "require-dev": {
-        "abigah/db-sync-from-prod": "^0.3",
+        "abigah/db-sync-from-prod": "^0.4",
         "fakerphp/faker": "^1.23",
         "laravel/boost": "^2.4",
         "laravel/pail": "^1.2.5",
