@@ -31,6 +31,13 @@
                         @php
                             $guests = collect($event['attendees'] ?? [])->reject(fn ($a) => $a['self'] ?? false)->values();
                             $modalName = 'event-'.md5($event['calendar_id'].$event['id']);
+                            // Not meetings: context Google keeps on the calendar.
+                            $kind = match ($event['type'] ?? 'default') {
+                                'workingLocation' => 'Working location',
+                                'focusTime' => 'Focus time',
+                                'outOfOffice' => 'Out of office',
+                                default => null,
+                            };
                         @endphp
                         <div wire:key="event-{{ md5($event['calendar_id'].$event['id']) }}">
                             <flux:modal.trigger :name="$modalName">
@@ -43,7 +50,12 @@
                                         @endif
                                     </div>
                                     <div class="min-w-0">
-                                        <div class="truncate font-medium text-zinc-900 dark:text-white">{{ $event['title'] }}</div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="truncate font-medium {{ $kind ? 'text-zinc-600 dark:text-zinc-400' : 'text-zinc-900 dark:text-white' }}">{{ $event['title'] }}</span>
+                                            @if ($kind)
+                                                <flux:badge size="sm" color="zinc">{{ $kind }}</flux:badge>
+                                            @endif
+                                        </div>
                                         {{-- A primary calendar is named after its account; saying it twice reads as a bug. --}}
                                         <div class="truncate text-xs text-zinc-500">
                                             {{ $event['calendar_name'] === $event['account'] ? $event['account'] : $event['calendar_name'].' · '.$event['account'] }}
@@ -59,6 +71,9 @@
                                 <div class="space-y-5">
                                     <div>
                                         <flux:heading size="lg">{{ $event['title'] }}</flux:heading>
+                                        @if ($kind)
+                                            <flux:badge size="sm" color="zinc" class="mt-2">{{ $kind }}</flux:badge>
+                                        @endif
                                         <flux:text variant="subtle" class="mt-1">
                                             @if ($event['all_day'])
                                                 All day · {{ $startsAt->format('l, F j') }}

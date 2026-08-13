@@ -271,6 +271,10 @@ class GoogleCalendarClient implements GoogleCalendar
                     'ends_at' => CarbonImmutable::parse($end, $timezone),
                     'all_day' => $allDay,
                     'link' => $event['htmlLink'] ?? null,
+                    // Google models working location, focus time and
+                    // out-of-office as events of their own kind.
+                    'type' => (string) ($event['eventType'] ?? 'default'),
+                    'busy' => ($event['transparency'] ?? 'opaque') === 'opaque',
                     'location' => $event['location'] ?? null,
                     'description' => $event['description'] ?? null,
                     'organizer' => $event['organizer']['email'] ?? null,

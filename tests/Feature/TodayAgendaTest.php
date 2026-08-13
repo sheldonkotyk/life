@@ -178,3 +178,29 @@ it('carries guests and the description through to the screen', function () {
         ->assertSee('Bring the draft.')
         ->assertDontSee('<br>', escape: false);
 });
+
+it('labels the things Google keeps that are not meetings', function () {
+    Http::preventStrayRequests();
+    userWithCalendars();
+
+    Http::fake(['www.googleapis.com/calendar/v3/calendars/*' => Http::response(['items' => [[
+        'id' => 'wl1',
+        'summary' => 'Home',
+        'eventType' => 'workingLocation',
+        'transparency' => 'transparent',
+        'start' => ['date' => '2026-08-13'],
+        'end' => ['date' => '2026-08-14'],
+    ], [
+        'id' => 'f1',
+        'summary' => 'Heads down',
+        'eventType' => 'focusTime',
+        'start' => ['dateTime' => '2026-08-13T13:00:00-05:00'],
+        'end' => ['dateTime' => '2026-08-13T15:00:00-05:00'],
+    ]]])]);
+
+    Livewire::test(Today::class)
+        ->assertSee('Home')
+        ->assertSee('Working location')
+        ->assertSee('Heads down')
+        ->assertSee('Focus time');
+});
