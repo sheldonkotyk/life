@@ -61,6 +61,24 @@ interface GoogleCalendar
         ?string $syncToken = null,
     ): array;
 
+    /**
+     * @return array{resource_id: string, expires_at: CarbonImmutable|null}
+     */
+    public function watchEvents(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        string $channelId,
+        string $address,
+        string $token,
+        int $ttlSeconds,
+    ): array;
+
+    public function stopWatch(
+        GoogleCalendarConnection $connection,
+        string $channelId,
+        string $resourceId,
+    ): void;
+
     public function deleteEvent(
         GoogleCalendarConnection $connection,
         string $calendarId,

@@ -53,6 +53,8 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_CALENDAR_REDIRECT_URI', '/auth/google/calendar/callback'),
+        // Google only pushes to https on a domain verified for the project.
+        'calendar_webhook_url' => env('GOOGLE_CALENDAR_WEBHOOK_URL'),
     ],
 
 ];

@@ -61,6 +61,19 @@ class SyncCalendarChanges
             ->unique(fn (BookingCalendarSelection $selection): string => $selection->google_calendar_connection_id.'|'.$selection->google_calendar_id);
     }
 
+    /**
+     * Reconcile one calendar, for a push notification naming it.
+     */
+    public function syncOne(CalendarSyncState $state): int
+    {
+        $destination = $this->destinations()->first(
+            fn (BookingCalendarSelection $selection): bool => $selection->google_calendar_connection_id === $state->google_calendar_connection_id
+                && $selection->google_calendar_id === $state->google_calendar_id,
+        );
+
+        return $destination ? $this->syncCalendar($destination) : 0;
+    }
+
     private function syncCalendar(BookingCalendarSelection $destination): int
     {
         $state = CalendarSyncState::firstOrCreate([

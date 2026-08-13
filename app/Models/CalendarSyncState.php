@@ -12,13 +12,29 @@ class CalendarSyncState extends Model
         'google_calendar_id',
         'sync_token',
         'synced_at',
+        'channel_id',
+        'channel_resource_id',
+        'channel_token',
+        'channel_expires_at',
     ];
 
     protected function casts(): array
     {
         return [
             'synced_at' => 'immutable_datetime',
+            'channel_expires_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * A channel is worth renewing once it is inside its last few hours, so a
+     * lapse never leaves a calendar unwatched between runs.
+     */
+    public function needsWatchRenewal(): bool
+    {
+        return $this->channel_id === null
+            || $this->channel_expires_at === null
+            || $this->channel_expires_at->isBefore(now()->addHours(6));
     }
 
     public function connection(): BelongsTo

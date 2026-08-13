@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'auth/apple/callback',
             'auth/apple/notifications',
+            'webhooks/google-calendar',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

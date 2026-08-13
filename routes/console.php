@@ -15,3 +15,7 @@ Schedule::command('notifications:send-daily-digest')
 Schedule::command('bookings:sync-calendars')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+Schedule::command('bookings:watch-calendars')
+    ->hourly()
+    ->withoutOverlapping();

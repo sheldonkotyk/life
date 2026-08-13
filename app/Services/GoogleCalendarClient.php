@@ -269,6 +269,65 @@ class GoogleCalendarClient implements GoogleCalendar
         return ['events' => $events, 'sync_token' => $nextSyncToken, 'expired' => false];
     }
 
+    /**
+     * Ask Google to notify a URL when this calendar changes. The notification
+     * carries no payload, so it only ever means "come and look".
+     *
+     * @return array{resource_id: string, expires_at: CarbonImmutable|null}
+     */
+    public function watchEvents(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        string $channelId,
+        string $address,
+        string $token,
+        int $ttlSeconds,
+    ): array {
+        $response = $this->send(
+            $connection,
+            fn (PendingRequest $request): Response => $request->post(
+                self::API_URL.'/calendars/'.rawurlencode($calendarId).'/events/watch',
+                [
+                    'id' => $channelId,
+                    'type' => 'web_hook',
+                    'address' => $address,
+                    'token' => $token,
+                    'params' => ['ttl' => (string) $ttlSeconds],
+                ],
+            ),
+        )->throw();
+
+        $expiration = $response->json('expiration');
+
+        return [
+            'resource_id' => (string) $response->json('resourceId'),
+            'expires_at' => $expiration
+                ? CarbonImmutable::createFromTimestampMs((int) $expiration)
+                : null,
+        ];
+    }
+
+    public function stopWatch(
+        GoogleCalendarConnection $connection,
+        string $channelId,
+        string $resourceId,
+    ): void {
+        $response = $this->send(
+            $connection,
+            fn (PendingRequest $request): Response => $request->post(self::API_URL.'/channels/stop', [
+                'id' => $channelId,
+                'resourceId' => $resourceId,
+            ]),
+        );
+
+        // A channel Google has already forgotten is in the state we wanted.
+        if (in_array($response->status(), [404, 410], true)) {
+            return;
+        }
+
+        $response->throw();
+    }
+
     public function deleteEvent(
         GoogleCalendarConnection $connection,
         string $calendarId,

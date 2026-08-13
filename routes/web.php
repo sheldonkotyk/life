@@ -3,6 +3,7 @@
 use App\Http\Controllers\AppleNotificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleCalendarController;
+use App\Http\Controllers\GoogleCalendarWebhookController;
 use App\Http\Controllers\TimezoneController;
 use App\Livewire\BookingSettings;
 use App\Livewire\CancelBookingPage;
@@ -42,6 +43,11 @@ Route::get('/meet/{bookingPage:slug}/decline/{booking}', RespondToBookingPage::c
     ->middleware('signed')
     ->defaults('answer', 'decline')
     ->name('booking.decline');
+
+// Google's push notifications: no session, no body, verified by the channel
+// token we chose when subscribing.
+Route::post('/webhooks/google-calendar', GoogleCalendarWebhookController::class)
+    ->name('google-calendar.webhook');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::get('/join/{code}', [AuthController::class, 'joinViaLink'])->name('login.invite.link');
