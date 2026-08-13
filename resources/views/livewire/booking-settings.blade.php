@@ -319,6 +319,10 @@
                 <flux:text variant="subtle">Meetings created through your public page.</flux:text>
             </div>
 
+            @error('bookings')
+                <flux:callout color="red" icon="exclamation-triangle">{{ $message }}</flux:callout>
+            @enderror
+
             <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
                 @foreach ($upcomingBookings as $upcoming)
                     <div wire:key="booking-{{ $upcoming->id }}" class="flex flex-col gap-1 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
@@ -326,8 +330,18 @@
                             <div class="font-medium text-zinc-900 dark:text-white">{{ $upcoming->guest_name }}</div>
                             <div class="text-sm text-zinc-500">{{ $upcoming->guest_email }}</div>
                         </div>
-                        <div class="text-sm text-zinc-600 dark:text-zinc-300 sm:text-right">
-                            {{ $upcoming->starts_at->setTimezone($bookingPage->timezone)->format('M j, Y · g:i A') }}
+                        <div class="flex items-center gap-4 sm:justify-end">
+                            <div class="text-sm text-zinc-600 dark:text-zinc-300 sm:text-right">
+                                {{ $upcoming->starts_at->setTimezone($bookingPage->timezone)->format('M j, Y · g:i A') }}
+                            </div>
+                            <flux:button
+                                wire:click="cancelBooking({{ $upcoming->id }})"
+                                wire:confirm="Cancel this meeting with {{ $upcoming->guest_name }}?"
+                                size="sm"
+                                variant="subtle"
+                            >
+                                Cancel
+                            </flux:button>
                         </div>
                     </div>
                 @endforeach

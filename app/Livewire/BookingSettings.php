@@ -2,7 +2,9 @@
 
 namespace App\Livewire;
 
+use App\Actions\CancelBooking;
 use App\Contracts\GoogleCalendar;
+use App\Models\Booking;
 use App\Models\BookingPage;
 use App\Models\GoogleCalendarConnection;
 use Illuminate\Support\Facades\DB;
@@ -212,6 +214,23 @@ class BookingSettings extends Component
         session()->flash('status', 'Google account disconnected. Remaining calendar selections were kept.');
     }
 
+    public function cancelBooking(int $bookingId, CancelBooking $cancelBooking): void
+    {
+        $booking = $this->bookingPage->bookings()->findOrFail($bookingId);
+
+        try {
+            $cancelBooking->execute($booking);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $this->addError('bookings', 'The meeting could not be cancelled in Google Calendar. Please try again.');
+
+            return;
+        }
+
+        session()->flash('status', 'Meeting cancelled. The guest was notified by Google Calendar.');
+    }
+
     public function render()
     {
         $connections = auth()->user()->googleCalendarConnections()
@@ -246,7 +265,7 @@ class BookingSettings extends Component
             'timezones' => \DateTimeZone::listIdentifiers(),
             'publicUrl' => route('booking.show', $this->bookingPage),
             'upcomingBookings' => $this->bookingPage->bookings()
-                ->where('status', 'confirmed')
+                ->where('status', Booking::STATUS_CONFIRMED)
                 ->where('starts_at', '>=', now())
                 ->orderBy('starts_at')
                 ->limit(10)

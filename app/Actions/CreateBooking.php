@@ -41,8 +41,14 @@ class CreateBooking
                 ]);
             }
 
+            $destination = $bookingPage->bookingCalendarSelections->sole();
+
+            // Recorded on the booking so a later cancellation still finds the
+            // event after the page's calendar choices have moved on.
             $booking = $bookingPage->bookings()->create([
                 ...$guest,
+                'google_calendar_connection_id' => $destination->google_calendar_connection_id,
+                'google_calendar_id' => $destination->google_calendar_id,
                 'starts_at' => $startsAt->utc(),
                 'ends_at' => $startsAt->addMinutes($bookingPage->duration_minutes)->utc(),
                 'status' => Booking::STATUS_PENDING,
@@ -50,7 +56,7 @@ class CreateBooking
 
             try {
                 $event = $this->googleCalendar->createEvent(
-                    $bookingPage->bookingCalendarSelections->sole(),
+                    $destination,
                     $bookingPage,
                     $booking,
                 );

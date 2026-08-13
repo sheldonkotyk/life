@@ -153,6 +153,27 @@ class GoogleCalendarClient implements GoogleCalendar
         ];
     }
 
+    public function deleteEvent(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        string $eventId,
+    ): void {
+        $response = $this->send(
+            $connection,
+            fn (PendingRequest $request): Response => $request
+                ->withQueryParameters(['sendUpdates' => 'all'])
+                ->delete(self::API_URL.'/calendars/'.rawurlencode($calendarId).'/events/'.rawurlencode($eventId)),
+        );
+
+        // Google answers 404/410 when the host already removed the event, which
+        // leaves the calendar in the state the cancellation was asking for.
+        if (in_array($response->status(), [404, 410], true)) {
+            return;
+        }
+
+        $response->throw();
+    }
+
     public function revoke(GoogleCalendarConnection $connection): void
     {
         $token = $this->credential($connection);
@@ -256,6 +277,6 @@ class GoogleCalendarClient implements GoogleCalendar
             $description .= "\n\nNotes:\n{$booking->notes}";
         }
 
-        return $description;
+        return $description."\n\nNeed to cancel? ".$booking->cancelUrl();
     }
 }

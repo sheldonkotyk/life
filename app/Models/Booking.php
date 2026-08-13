@@ -6,6 +6,7 @@ use Database\Factories\BookingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\URL;
 
 class Booking extends Model
 {
@@ -16,8 +17,11 @@ class Booking extends Model
 
     public const STATUS_CONFIRMED = 'confirmed';
 
+    public const STATUS_CANCELLED = 'cancelled';
+
     protected $fillable = [
         'booking_page_id',
+        'google_calendar_connection_id',
         'guest_name',
         'guest_email',
         'notes',
@@ -26,7 +30,9 @@ class Booking extends Model
         'guest_timezone',
         'status',
         'google_event_id',
+        'google_calendar_id',
         'google_event_link',
+        'cancelled_at',
     ];
 
     protected $attributes = [
@@ -38,11 +44,34 @@ class Booking extends Model
         return [
             'starts_at' => 'immutable_datetime',
             'ends_at' => 'immutable_datetime',
+            'cancelled_at' => 'immutable_datetime',
         ];
     }
 
     public function bookingPage(): BelongsTo
     {
         return $this->belongsTo(BookingPage::class);
+    }
+
+    public function googleCalendarConnection(): BelongsTo
+    {
+        return $this->belongsTo(GoogleCalendarConnection::class);
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === self::STATUS_CANCELLED;
+    }
+
+    /**
+     * A guest keeps no account, so the cancel link is signed and travels with
+     * the calendar invitation.
+     */
+    public function cancelUrl(): string
+    {
+        return URL::signedRoute('booking.cancel', [
+            'bookingPage' => $this->bookingPage->slug,
+            'booking' => $this->id,
+        ]);
     }
 }

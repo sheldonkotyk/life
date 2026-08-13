@@ -29,9 +29,18 @@ class BookingFactory extends Factory
             'starts_at' => $startsAt,
             'ends_at' => $startsAt->addMinutes(30),
             'guest_timezone' => 'America/Winnipeg',
-            'status' => 'confirmed',
+            'status' => Booking::STATUS_CONFIRMED,
             'google_event_id' => 'lifebooking'.fake()->unique()->randomNumber(7),
+            'google_calendar_id' => 'primary',
             'google_event_link' => 'https://calendar.google.com/calendar/event?eid='.fake()->uuid(),
         ];
+    }
+
+    public function cancelled(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status' => Booking::STATUS_CANCELLED,
+            'cancelled_at' => CarbonImmutable::now(),
+        ]);
     }
 }

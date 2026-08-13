@@ -36,5 +36,11 @@ interface GoogleCalendar
         Booking $booking,
     ): array;
 
+    public function deleteEvent(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        string $eventId,
+    ): void;
+
     public function revoke(GoogleCalendarConnection $connection): void;
 }

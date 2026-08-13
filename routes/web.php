@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\TimezoneController;
 use App\Livewire\BookingSettings;
+use App\Livewire\CancelBookingPage;
 use App\Livewire\HouseholdSettings;
 use App\Livewire\Lists;
 use App\Livewire\MemberProfile;
@@ -23,6 +24,9 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/meet/{bookingPage:slug}', PublicBookingPage::class)->name('booking.show');
+Route::get('/meet/{bookingPage:slug}/cancel/{booking}', CancelBookingPage::class)
+    ->middleware('signed')
+    ->name('booking.cancel');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::get('/join/{code}', [AuthController::class, 'joinViaLink'])->name('login.invite.link');
