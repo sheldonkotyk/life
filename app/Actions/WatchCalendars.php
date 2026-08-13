@@ -42,7 +42,7 @@ class WatchCalendars
                 'google_calendar_id' => $destination->google_calendar_id,
             ]);
 
-            if (! $state->needsWatchRenewal()) {
+            if (! $state->needsWatchRenewal($address)) {
                 continue;
             }
 
@@ -63,8 +63,9 @@ class WatchCalendars
 
     private function renew(BookingCalendarSelection $destination, CalendarSyncState $state, string $address): void
     {
-        // Stop the old channel first so Google is not pushing twice.
-        if ($state->channel_id && $state->channel_resource_id) {
+        // Stop the old channel first so Google is not pushing twice — but only
+        // ours: a channel belonging to another environment is left to expire.
+        if ($state->channel_id && $state->channel_resource_id && $state->channelBelongsTo($address)) {
             try {
                 $this->googleCalendar->stopWatch(
                     $destination->connection,
@@ -92,6 +93,7 @@ class WatchCalendars
             'channel_id' => $channelId,
             'channel_resource_id' => $channel['resource_id'],
             'channel_token' => $token,
+            'channel_address' => $address,
             'channel_expires_at' => $channel['expires_at'],
         ]);
     }

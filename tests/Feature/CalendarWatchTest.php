@@ -73,6 +73,7 @@ it('leaves a channel alone until it is close to expiring', function () {
         'channel_id' => (string) Str::uuid(),
         'channel_resource_id' => 'resource-1',
         'channel_token' => 'secret',
+        'channel_address' => 'https://life.test/webhooks/google-calendar',
         'channel_expires_at' => now()->addDays(3),
     ]);
 
@@ -91,6 +92,7 @@ it('stops the old channel before opening its replacement', function () {
         'channel_id' => '11111111-1111-1111-1111-111111111111',
         'channel_resource_id' => 'resource-old',
         'channel_token' => 'old-secret',
+        'channel_address' => 'https://life.test/webhooks/google-calendar',
         'channel_expires_at' => now()->addHour(),
     ]);
 
@@ -202,4 +204,37 @@ it('ignores the handshake message and an unknown channel', function () {
     ])->post(route('google-calendar.webhook'))->assertNoContent();
 
     Http::assertNothingSent();
+});
+
+it("leaves another environment's channel for Google to expire", function () {
+    Http::preventStrayRequests();
+    $page = watchablePage();
+
+    // What a database copied down from production looks like locally.
+    CalendarSyncState::create([
+        'google_calendar_connection_id' => $page->google_calendar_connection_id,
+        'google_calendar_id' => 'primary',
+        'channel_id' => '66666666-6666-6666-6666-666666666666',
+        'channel_resource_id' => 'production-resource',
+        'channel_token' => 'production-secret',
+        'channel_address' => 'https://life.kotyk.com/webhooks/google-calendar',
+        'channel_expires_at' => now()->addWeek(),
+    ]);
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/calendars/*/events/watch' => Http::response([
+            'resourceId' => 'local-resource',
+            'expiration' => (string) now()->addWeek()->getTimestampMs(),
+        ]),
+    ]);
+
+    app(WatchCalendars::class)->execute();
+
+    $state = CalendarSyncState::sole();
+
+    expect($state->channel_resource_id)->toBe('local-resource')
+        ->and($state->channel_address)->toBe('https://life.test/webhooks/google-calendar');
+
+    // Production keeps receiving its notifications.
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/channels/stop'));
 });
