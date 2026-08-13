@@ -257,6 +257,18 @@
             </flux:card>
 
             <flux:card>
+                <flux:heading size="lg">Booking emails</flux:heading>
+                <flux:subheading>When someone books time with you, or asks to.</flux:subheading>
+
+                <div class="mt-6">
+                    <flux:switch
+                        wire:model.live="bookingEmailsEnabled"
+                        label="Email me about bookings"
+                        description="Requests arrive with accept and decline links. This is separate from the notification settings above, so booking mail keeps working when the rest is off." />
+                </div>
+            </flux:card>
+
+            <flux:card>
                 <flux:heading size="lg">Daily "Today" email</flux:heading>
                 <flux:subheading>Get a morning summary of meals and to-dos. Times are in your timezone ({{ auth()->user()->getTimezone() }}).</flux:subheading>
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\BookingSettings;
+use App\Livewire\Profile;
 use App\Livewire\PublicBookingPage;
 use App\Mail\BookingHoldPlaced;
 use App\Mail\BookingHoldReleased;
@@ -330,9 +331,10 @@ it('emails the owner about a booking that needed no approval', function () {
     Mail::assertNotSent(BookingHoldPlaced::class);
 });
 
-it('respects an owner who has turned email notifications off', function () {
+it('keeps booking mail flowing when general notifications are off', function () {
     Http::preventStrayRequests();
     $page = approvalPage();
+    // Booking mail is transactional, so the general switch does not silence it.
     $page->user->update(['notification_preferences' => ['email' => false]]);
 
     Http::fake(function (Request $request) {
@@ -351,10 +353,34 @@ it('respects an owner who has turned email notifications off', function () {
         ->call('book')
         ->assertHasNoErrors();
 
-    Mail::assertNotSent(BookingReceived::class);
-    Mail::assertSent(BookingHoldPlaced::class);
+    Mail::assertSent(BookingReceived::class);
 });
 
+it('stops booking mail when its own switch is off', function () {
+    Http::preventStrayRequests();
+    $page = approvalPage();
+    $page->user->update(['booking_emails_enabled' => false]);
+
+    Http::fake(function (Request $request) {
+        if (str_contains($request->url(), '/events')) {
+            return Http::response(['id' => 'lifebooking1', 'iCalUID' => 'lifebooking1@google.com']);
+        }
+
+        return Http::response(['calendars' => ['primary' => ['busy' => []]]]);
+    });
+
+    Livewire::test(PublicBookingPage::class, ['bookingPage' => $page])
+        ->set('selectedDate', '2026-08-12')
+        ->set('selectedStart', '2026-08-12T09:00:00+00:00')
+        ->set('guestName', 'Alex Guest')
+        ->set('guestEmail', 'alex@example.test')
+        ->call('book')
+        ->assertHasNoErrors();
+
+    Mail::assertNotSent(BookingReceived::class);
+    // The guest still gets their hold; only the owner's note is suppressed.
+    Mail::assertSent(BookingHoldPlaced::class);
+});
 it('gives the guest a way to change the time from their held entry', function () {
     $page = approvalPage();
     $booking = Booking::factory()->for($page)->create([
@@ -368,4 +394,16 @@ it('gives the guest a way to change the time from their held entry', function ()
         ->and($ics)->toContain('STATUS:TENTATIVE')
         ->and($ics)->toContain('METHOD:REQUEST')
         ->and($ics)->toContain(str_replace(['\\', ',', ';'], ['\\\\', '\,', '\;'], $booking->rescheduleUrl()));
+});
+
+it('lets the owner turn booking mail off from their profile', function () {
+    $user = loginUser();
+
+    expect($user->wantsBookingEmails())->toBeTrue();
+
+    Livewire::test(Profile::class)
+        ->assertSet('bookingEmailsEnabled', true)
+        ->set('bookingEmailsEnabled', false);
+
+    expect($user->fresh()->wantsBookingEmails())->toBeFalse();
 });

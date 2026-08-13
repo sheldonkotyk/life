@@ -39,6 +39,7 @@ class User extends Authenticatable
             'avatar_config' => 'array',
             'notification_preferences' => 'array',
             'daily_today_email_enabled' => 'boolean',
+            'booking_emails_enabled' => 'boolean',
         ];
     }
 
@@ -56,6 +57,15 @@ class User extends Authenticatable
     public function wantsNotificationOn(string $channel): bool
     {
         return (bool) ($this->notificationPreferences()[$channel] ?? false);
+    }
+
+    /**
+     * Booking mail is transactional and has its own switch, so turning off
+     * general notifications does not silence a meeting request.
+     */
+    public function wantsBookingEmails(): bool
+    {
+        return (bool) ($this->booking_emails_enabled ?? true) && filled($this->email);
     }
 
     public function hasBuiltAvatar(): bool

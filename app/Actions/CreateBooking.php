@@ -95,7 +95,7 @@ class CreateBooking
             // The calendar entry alone is easy to miss, so the owner is told
             // directly, with the same links the entry carries.
             $owner = $bookingPage->user;
-            if ($owner->wantsNotificationOn('email') && filled($owner->email)) {
+            if ($owner->wantsBookingEmails()) {
                 Mail::to($owner->email)->send(new BookingReceived($booking));
             }
 

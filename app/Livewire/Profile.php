@@ -42,6 +42,8 @@ class Profile extends Component
 
     public ?string $dailyTodayEmailAt = null;
 
+    public bool $bookingEmailsEnabled = true;
+
     public function mount(): void
     {
         $user = auth()->user();
@@ -52,6 +54,7 @@ class Profile extends Component
         $this->dailyTodayEmailAt = $user->daily_today_email_at
             ? CarbonImmutable::parse($user->daily_today_email_at)->format('H:i')
             : null;
+        $this->bookingEmailsEnabled = $user->wantsBookingEmails();
     }
 
     public function updatedNotificationPrefs(): void
@@ -65,6 +68,11 @@ class Profile extends Component
 
         $user->update(['notification_preferences' => $prefs]);
         $this->notificationPrefs = $prefs;
+    }
+
+    public function updatedBookingEmailsEnabled(): void
+    {
+        auth()->user()->update(['booking_emails_enabled' => $this->bookingEmailsEnabled]);
     }
 
     public function updatedDailyTodayEmailAt(): void
