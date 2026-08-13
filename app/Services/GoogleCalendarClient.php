@@ -271,11 +271,42 @@ class GoogleCalendarClient implements GoogleCalendar
                     'ends_at' => CarbonImmutable::parse($end, $timezone),
                     'all_day' => $allDay,
                     'link' => $event['htmlLink'] ?? null,
+                    'location' => $event['location'] ?? null,
+                    'description' => $event['description'] ?? null,
+                    'organizer' => $event['organizer']['email'] ?? null,
+                    'attendees' => $this->attendees($event),
                 ];
             }
         }
 
         return $events;
+    }
+
+    /**
+     * @param  array<string, mixed>  $event
+     * @return list<array{name: string, email: string, status: string, organizer: bool, self: bool}>
+     */
+    private function attendees(array $event): array
+    {
+        $attendees = [];
+
+        foreach ($event['attendees'] ?? [] as $attendee) {
+            if ($attendee['resource'] ?? false) {
+                continue;
+            }
+
+            $email = (string) ($attendee['email'] ?? '');
+
+            $attendees[] = [
+                'name' => (string) ($attendee['displayName'] ?? $email),
+                'email' => $email,
+                'status' => (string) ($attendee['responseStatus'] ?? 'needsAction'),
+                'organizer' => (bool) ($attendee['organizer'] ?? false),
+                'self' => (bool) ($attendee['self'] ?? false),
+            ];
+        }
+
+        return $attendees;
     }
 
     /**

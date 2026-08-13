@@ -146,3 +146,35 @@ it('shows nothing at all when no calendars are connected', function () {
 
     Http::assertNothingSent();
 });
+
+it('carries guests and the description through to the screen', function () {
+    Http::preventStrayRequests();
+    userWithCalendars();
+
+    Http::fake(['www.googleapis.com/calendar/v3/calendars/*' => Http::response(['items' => [[
+        'id' => 'w1',
+        'summary' => 'Roadmap review',
+        'location' => 'Boardroom',
+        'description' => 'Bring the draft.<br>Second line.',
+        'start' => ['dateTime' => '2026-08-13T09:00:00-05:00'],
+        'end' => ['dateTime' => '2026-08-13T10:00:00-05:00'],
+        'organizer' => ['email' => 'work@example.test'],
+        'attendees' => [
+            ['email' => 'work@example.test', 'self' => true, 'organizer' => true, 'responseStatus' => 'accepted'],
+            ['email' => 'alex@example.test', 'displayName' => 'Alex Guest', 'responseStatus' => 'declined'],
+            ['email' => 'sam@example.test', 'responseStatus' => 'needsAction'],
+            ['email' => 'room-3@example.test', 'resource' => true, 'responseStatus' => 'accepted'],
+        ],
+    ]]])]);
+
+    Livewire::test(Today::class)
+        // The row summarises, counting neither the viewer nor the meeting room.
+        ->assertSee('2 guests')
+        ->assertSee('Alex Guest')
+        ->assertSee('Declined')
+        ->assertSee('No reply')
+        ->assertSee('Boardroom')
+        // Google's html is shown as text rather than rendered.
+        ->assertSee('Bring the draft.')
+        ->assertDontSee('<br>', escape: false);
+});

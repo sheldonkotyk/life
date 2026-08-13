@@ -28,21 +28,113 @@
                             $startsAt = \Carbon\CarbonImmutable::parse($event['starts_at'])->setTimezone($today->timezone);
                             $endsAt = \Carbon\CarbonImmutable::parse($event['ends_at'])->setTimezone($today->timezone);
                         @endphp
-                        <div wire:key="event-{{ $event['calendar_id'] }}-{{ $event['id'] }}" class="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:gap-4">
-                            <div class="w-36 shrink-0 text-sm font-medium whitespace-nowrap text-zinc-500 sm:w-44">
-                                @if ($event['all_day'])
-                                    All day
-                                @else
-                                    {{ $startsAt->format('g:i A') }} – {{ $endsAt->format('g:i A') }}
-                                @endif
-                            </div>
-                            <div class="min-w-0">
-                                <div class="truncate font-medium text-zinc-900 dark:text-white">{{ $event['title'] }}</div>
-                                {{-- A primary calendar is named after its account; saying it twice reads as a bug. --}}
-                                <div class="truncate text-xs text-zinc-500">
-                                    {{ $event['calendar_name'] === $event['account'] ? $event['account'] : $event['calendar_name'].' · '.$event['account'] }}
+                        @php
+                            $guests = collect($event['attendees'] ?? [])->reject(fn ($a) => $a['self'] ?? false)->values();
+                            $modalName = 'event-'.md5($event['calendar_id'].$event['id']);
+                        @endphp
+                        <div wire:key="event-{{ md5($event['calendar_id'].$event['id']) }}">
+                            <flux:modal.trigger :name="$modalName">
+                                <button type="button" class="flex w-full flex-col gap-1 py-3 text-left first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:gap-4">
+                                    <div class="w-36 shrink-0 text-sm font-medium whitespace-nowrap text-zinc-500 sm:w-44">
+                                        @if ($event['all_day'])
+                                            All day
+                                        @else
+                                            {{ $startsAt->format('g:i A') }} – {{ $endsAt->format('g:i A') }}
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="truncate font-medium text-zinc-900 dark:text-white">{{ $event['title'] }}</div>
+                                        {{-- A primary calendar is named after its account; saying it twice reads as a bug. --}}
+                                        <div class="truncate text-xs text-zinc-500">
+                                            {{ $event['calendar_name'] === $event['account'] ? $event['account'] : $event['calendar_name'].' · '.$event['account'] }}
+                                            @if ($guests->isNotEmpty())
+                                                · {{ $guests->count() }} {{ Str::plural('guest', $guests->count()) }}
+                                            @endif
+                                        </div>
+                                    </div>
+                                </button>
+                            </flux:modal.trigger>
+
+                            <flux:modal :name="$modalName" class="md:w-[32rem]">
+                                <div class="space-y-5">
+                                    <div>
+                                        <flux:heading size="lg">{{ $event['title'] }}</flux:heading>
+                                        <flux:text variant="subtle" class="mt-1">
+                                            @if ($event['all_day'])
+                                                All day · {{ $startsAt->format('l, F j') }}
+                                            @else
+                                                {{ $startsAt->format('l, F j · g:i A') }} – {{ $endsAt->format('g:i A') }}
+                                            @endif
+                                        </flux:text>
+                                        <flux:text variant="subtle" class="mt-1">
+                                            {{ $event['calendar_name'] === $event['account'] ? $event['account'] : $event['calendar_name'].' · '.$event['account'] }}
+                                        </flux:text>
+                                    </div>
+
+                                    @if ($event['location'] ?? null)
+                                        <div class="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                                            <flux:icon.map-pin class="size-4 shrink-0 text-zinc-400" />
+                                            <span class="break-words">{{ $event['location'] }}</span>
+                                        </div>
+                                    @endif
+
+                                    @if ($guests->isNotEmpty())
+                                        <div>
+                                            <flux:label>{{ $guests->count() }} {{ Str::plural('guest', $guests->count()) }}</flux:label>
+                                            <div class="mt-2 space-y-2">
+                                                @foreach ($guests as $guest)
+                                                    <div class="flex items-center justify-between gap-3 text-sm">
+                                                        <div class="min-w-0">
+                                                            <div class="truncate text-zinc-900 dark:text-white">
+                                                                {{ $guest['name'] }}
+                                                                @if ($guest['organizer'])
+                                                                    <span class="text-xs text-zinc-500">· organiser</span>
+                                                                @endif
+                                                            </div>
+                                                            @if ($guest['name'] !== $guest['email'])
+                                                                <div class="truncate text-xs text-zinc-500">{{ $guest['email'] }}</div>
+                                                            @endif
+                                                        </div>
+                                                        <flux:badge size="sm" :color="match ($guest['status']) {
+                                                            'accepted' => 'emerald',
+                                                            'declined' => 'red',
+                                                            'tentative' => 'amber',
+                                                            default => 'zinc',
+                                                        }">
+                                                            {{ match ($guest['status']) {
+                                                                'accepted' => 'Going',
+                                                                'declined' => 'Declined',
+                                                                'tentative' => 'Maybe',
+                                                                default => 'No reply',
+                                                            } }}
+                                                        </flux:badge>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    @if (filled($event['description'] ?? null))
+                                        <div>
+                                            <flux:label>Description</flux:label>
+                                            {{-- Google allows html here, so it is shown as text. --}}
+                                            @php
+                                                // Google keeps html here, and calendar tools pad it with
+                                                // empty lines that read as a rendering fault.
+                                                $description = strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>'], "\n", $event['description']));
+                                                $description = trim(preg_replace("/\n{3,}/", "\n\n", html_entity_decode($description)));
+                                            @endphp
+                                            <div class="mt-2 max-h-64 overflow-y-auto text-sm whitespace-pre-line text-zinc-700 dark:text-zinc-300">{{ $description }}</div>
+                                        </div>
+                                    @endif
+
+                                    @if ($event['link'] ?? null)
+                                        <flux:button :href="$event['link']" target="_blank" variant="ghost" icon="arrow-top-right-on-square">
+                                            Open in Google Calendar
+                                        </flux:button>
+                                    @endif
                                 </div>
-                            </div>
+                            </flux:modal>
                         </div>
                     @endforeach
                 </div>

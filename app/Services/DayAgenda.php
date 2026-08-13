@@ -21,6 +21,12 @@ class DayAgenda
 {
     private const CACHE_SECONDS = 120;
 
+    /**
+     * Bumped whenever the cached shape changes, so a deploy cannot serve a
+     * payload the new view does not understand.
+     */
+    private const CACHE_VERSION = 2;
+
     public function __construct(private GoogleCalendar $googleCalendar) {}
 
     /**
@@ -34,7 +40,7 @@ class DayAgenda
             return ['events' => [], 'failed' => false, 'calendars' => 0];
         }
 
-        $key = 'agenda:'.$user->id.':'.$day->toDateString().':'.$timezone;
+        $key = self::cacheKey($user, $day, $timezone);
 
         return Cache::remember(
             $key,
@@ -45,7 +51,12 @@ class DayAgenda
 
     public static function forget(User $user, CarbonImmutable $day, string $timezone): void
     {
-        Cache::forget('agenda:'.$user->id.':'.$day->toDateString().':'.$timezone);
+        Cache::forget(self::cacheKey($user, $day, $timezone));
+    }
+
+    private static function cacheKey(User $user, CarbonImmutable $day, string $timezone): string
+    {
+        return 'agenda:v'.self::CACHE_VERSION.':'.$user->id.':'.$day->toDateString().':'.$timezone;
     }
 
     /**

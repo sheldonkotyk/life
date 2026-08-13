@@ -54,7 +54,7 @@ interface GoogleCalendar
 
     /**
      * @param  list<string>  $calendarIds
-     * @return list<array{id: string, calendar_id: string, title: string, starts_at: CarbonImmutable, ends_at: CarbonImmutable, all_day: bool, link: string|null}>
+     * @return list<array{id: string, calendar_id: string, title: string, starts_at: CarbonImmutable, ends_at: CarbonImmutable, all_day: bool, link: string|null, location: string|null, description: string|null, organizer: string|null, attendees: list<array<string, mixed>>}>
      */
     public function eventsBetween(
         GoogleCalendarConnection $connection,
