@@ -2,6 +2,8 @@
 
 use App\Livewire\BookingSettings;
 use App\Livewire\PublicBookingPage;
+use App\Mail\BookingHoldPlaced;
+use App\Mail\BookingHoldReleased;
 use App\Models\Booking;
 use App\Models\BookingCalendarSelection;
 use App\Models\BookingPage;
@@ -9,10 +11,12 @@ use App\Services\AvailabilityService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
 beforeEach(function () {
     CarbonImmutable::setTestNow('2026-08-11 12:00:00 UTC');
+    Mail::fake();
 });
 
 afterEach(function () {
@@ -39,13 +43,21 @@ function approvalPage(): BookingPage
     return $page;
 }
 
-it('holds the request without touching the calendar', function () {
+it('pencils the request into the owner calendar without inviting the guest', function () {
     Http::preventStrayRequests();
     $page = approvalPage();
 
-    Http::fake([
-        'www.googleapis.com/calendar/v3/freeBusy' => Http::response(['calendars' => ['primary' => ['busy' => []]]]),
-    ]);
+    Http::fake(function (Request $request) {
+        if (str_contains($request->url(), '/events')) {
+            return Http::response([
+                'id' => 'lifebooking1',
+                'iCalUID' => 'lifebooking1@google.com',
+                'htmlLink' => 'https://calendar.google.com/event/1',
+            ]);
+        }
+
+        return Http::response(['calendars' => ['primary' => ['busy' => []]]]);
+    });
 
     Livewire::test(PublicBookingPage::class, ['bookingPage' => $page])
         ->set('selectedDate', '2026-08-12')
@@ -59,9 +71,19 @@ it('holds the request without touching the calendar', function () {
     $booking = Booking::sole();
 
     expect($booking->status)->toBe(Booking::STATUS_PENDING)
-        ->and($booking->google_event_id)->toBeNull();
+        ->and($booking->google_event_id)->toBe('lifebooking1')
+        ->and($booking->google_ical_uid)->toBe('lifebooking1@google.com');
 
-    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/events'));
+    // Tentative, and with no attendee the answer links stay private to the owner.
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/events')
+        && $request['status'] === 'tentative'
+        && ! isset($request['attendees'])
+        && str_contains($request->url(), 'sendUpdates=none')
+        && str_contains($request['description'], $booking->acceptUrl())
+        && str_contains($request['description'], $booking->declineUrl()));
+
+    // The guest's own calendar holds the time through an emailed invitation.
+    Mail::assertSent(BookingHoldPlaced::class, fn (BookingHoldPlaced $mail): bool => $mail->hasTo('alex@example.test'));
 });
 
 it('keeps the held time off the page while it waits', function () {
@@ -83,13 +105,14 @@ it('keeps the held time off the page while it waits', function () {
     expect($starts)->not->toContain('2026-08-12T09:00:00+00:00');
 });
 
-it('creates the event only once the owner accepts', function () {
+it('confirms the held event and invites the guest when the owner accepts', function () {
     Http::preventStrayRequests();
     $page = approvalPage();
     $booking = Booking::factory()->for($page)->create([
         'status' => Booking::STATUS_PENDING,
-        'google_event_id' => null,
-        'google_calendar_id' => null,
+        'google_calendar_connection_id' => $page->google_calendar_connection_id,
+        'google_calendar_id' => 'primary',
+        'google_event_id' => 'lifebooking1',
         'starts_at' => CarbonImmutable::parse('2026-08-12 09:00:00', 'UTC'),
         'ends_at' => CarbonImmutable::parse('2026-08-12 09:30:00', 'UTC'),
     ]);
@@ -110,11 +133,13 @@ it('creates the event only once the owner accepts', function () {
     $booking->refresh();
 
     expect($booking->status)->toBe(Booking::STATUS_CONFIRMED)
-        ->and($booking->google_event_id)->toBe('lifebooking1')
         ->and($booking->responded_at)->not->toBeNull();
 
-    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/events')
-        && $request->method() === 'POST');
+    Http::assertSent(fn (Request $request): bool => $request->method() === 'PATCH'
+        && str_contains($request->url(), '/events/lifebooking1')
+        && $request['status'] === 'confirmed'
+        && $request['attendees'][0]['email'] === $booking->guest_email
+        && str_contains($request->url(), 'sendUpdates=all'));
 });
 
 it('frees the time when the owner declines', function () {
@@ -122,7 +147,9 @@ it('frees the time when the owner declines', function () {
     $page = approvalPage();
     $booking = Booking::factory()->for($page)->create([
         'status' => Booking::STATUS_PENDING,
-        'google_event_id' => null,
+        'google_calendar_connection_id' => $page->google_calendar_connection_id,
+        'google_calendar_id' => 'primary',
+        'google_event_id' => 'lifebooking1',
         'starts_at' => CarbonImmutable::parse('2026-08-12 09:00:00', 'UTC'),
         'ends_at' => CarbonImmutable::parse('2026-08-12 09:30:00', 'UTC'),
     ]);
@@ -130,6 +157,7 @@ it('frees the time when the owner declines', function () {
     Http::fake([
         'www.googleapis.com/calendar/v3/users/me/calendarList*' => Http::response(['items' => []]),
         'www.googleapis.com/calendar/v3/freeBusy' => Http::response(['calendars' => ['primary' => ['busy' => []]]]),
+        'www.googleapis.com/calendar/v3/calendars/*' => Http::response([], 204),
     ]);
 
     Livewire::test(BookingSettings::class)
@@ -138,11 +166,12 @@ it('frees the time when the owner declines', function () {
 
     expect($booking->refresh()->status)->toBe(Booking::STATUS_REJECTED);
 
+    Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE');
+    Mail::assertSent(BookingHoldReleased::class);
+
     $starts = collect(app(AvailabilityService::class)->slots($page->fresh(), '2026-08-12'))->pluck('start');
 
     expect($starts)->toContain('2026-08-12T09:00:00+00:00');
-
-    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/events'));
 });
 
 it('refuses to accept a request whose time has since been taken', function () {
@@ -199,4 +228,48 @@ it('books straight into the calendar when approval is off', function () {
         ->assertSee("You're booked", escape: false);
 
     expect(Booking::sole()->status)->toBe(Booking::STATUS_CONFIRMED);
+});
+
+it('answers from the link in the calendar entry without signing in', function () {
+    Http::preventStrayRequests();
+    $page = approvalPage();
+    $booking = Booking::factory()->for($page)->create([
+        'status' => Booking::STATUS_PENDING,
+        'google_calendar_connection_id' => $page->google_calendar_connection_id,
+        'google_calendar_id' => 'primary',
+        'google_event_id' => 'lifebooking1',
+        'starts_at' => CarbonImmutable::parse('2026-08-12 09:00:00', 'UTC'),
+        'ends_at' => CarbonImmutable::parse('2026-08-12 09:30:00', 'UTC'),
+    ]);
+
+    Http::fake(function (Request $request) {
+        if (str_contains($request->url(), 'freeBusy')) {
+            return Http::response(['calendars' => ['primary' => ['busy' => []]]]);
+        }
+
+        return Http::response(['id' => 'lifebooking1']);
+    });
+
+    auth()->logout();
+
+    $this->get($booking->acceptUrl())->assertOk()->assertSee('Accepted');
+
+    expect($booking->refresh()->status)->toBe(Booking::STATUS_CONFIRMED);
+});
+
+it('refuses an answer link that was not signed', function () {
+    $page = approvalPage();
+    $booking = Booking::factory()->for($page)->create([
+        'status' => Booking::STATUS_PENDING,
+        'google_event_id' => 'lifebooking1',
+    ]);
+
+    auth()->logout();
+
+    $this->get(route('booking.decline', [
+        'bookingPage' => $page,
+        'booking' => $booking,
+    ], false))->assertForbidden();
+
+    expect($booking->refresh()->status)->toBe(Booking::STATUS_PENDING);
 });

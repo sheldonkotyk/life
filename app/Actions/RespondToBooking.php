@@ -3,10 +3,12 @@
 namespace App\Actions;
 
 use App\Contracts\GoogleCalendar;
+use App\Mail\BookingHoldReleased;
 use App\Models\Booking;
 use App\Services\AvailabilityService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -44,18 +46,17 @@ class RespondToBooking
                 ]);
             }
 
-            $destination = $bookingPage->bookingCalendarSelections()->sole();
-
             // Google first: a refused write must leave the request pending
             // rather than claim a meeting that does not exist.
-            $event = $this->googleCalendar->createEvent($destination, $bookingPage, $booking);
+            $this->googleCalendar->confirmEvent(
+                $booking->googleCalendarConnection,
+                $booking->google_calendar_id,
+                $booking->google_event_id,
+                $booking,
+            );
 
             $booking->update([
                 'status' => Booking::STATUS_CONFIRMED,
-                'google_event_id' => $event['id'],
-                'google_event_link' => $event['html_link'],
-                'google_calendar_id' => $destination->google_calendar_id,
-                'google_calendar_connection_id' => $destination->google_calendar_connection_id,
                 'responded_at' => now(),
             ]);
 
@@ -69,11 +70,27 @@ class RespondToBooking
             return $booking;
         }
 
+        // The held event leaves the owner's calendar; the guest was never
+        // invited, so nobody is told about a meeting that never happened.
+        if ($booking->googleCalendarConnection && filled($booking->google_event_id)) {
+            $this->googleCalendar->deleteEvent(
+                $booking->googleCalendarConnection,
+                $booking->google_calendar_id,
+                $booking->google_event_id,
+            );
+        }
+
         $booking->update([
             'status' => Booking::STATUS_REJECTED,
             'responded_at' => now(),
         ]);
 
-        return $booking->refresh();
+        $booking->refresh();
+
+        if ($organiser = $booking->googleCalendarConnection?->google_email) {
+            Mail::to($booking->guest_email)->send(new BookingHoldReleased($booking, $organiser));
+        }
+
+        return $booking;
     }
 }

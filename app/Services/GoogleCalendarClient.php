@@ -105,37 +105,52 @@ class GoogleCalendarClient implements GoogleCalendar
     }
 
     /**
-     * @return array{id: string, html_link: string|null}
+     * @return array{id: string, html_link: string|null, ical_uid: string|null}
      */
     public function createEvent(
         BookingCalendarSelection $calendar,
         BookingPage $bookingPage,
         Booking $booking,
+        bool $awaitingApproval = false,
     ): array {
         $calendar->loadMissing('connection.oauthToken');
         $connection = $calendar->connection;
         $eventId = 'lifebooking'.$booking->id;
         $url = self::API_URL.'/calendars/'.rawurlencode($calendar->google_calendar_id).'/events';
 
+        // A request is written as tentative with no attendee: the owner sees it
+        // pencilled into their agenda with the links to answer it, and the guest
+        // is only invited once it is accepted. Attendees can read the
+        // description, so the answer links must not travel with it.
+        $body = [
+            'id' => $eventId,
+            'summary' => $awaitingApproval ? 'Request: '.$booking->summary() : $booking->summary(),
+            'description' => $awaitingApproval
+                ? $this->requestDescription($booking)
+                : $this->eventDescription($booking),
+            'status' => $awaitingApproval ? 'tentative' : 'confirmed',
+            'start' => [
+                'dateTime' => $booking->starts_at->toRfc3339String(),
+                'timeZone' => $bookingPage->timezone,
+            ],
+            'end' => [
+                'dateTime' => $booking->ends_at->toRfc3339String(),
+                'timeZone' => $bookingPage->timezone,
+            ],
+        ];
+
+        if (! $awaitingApproval) {
+            $body['attendees'] = [[
+                'email' => $booking->guest_email,
+                'displayName' => $booking->guest_name,
+            ]];
+        }
+
         $response = $this->send(
             $connection,
-            fn (PendingRequest $request): Response => $request->withQueryParameters(['sendUpdates' => 'all'])->post($url, [
-                'id' => $eventId,
-                'summary' => $booking->summary(),
-                'description' => $this->eventDescription($booking),
-                'start' => [
-                    'dateTime' => $booking->starts_at->toRfc3339String(),
-                    'timeZone' => $bookingPage->timezone,
-                ],
-                'end' => [
-                    'dateTime' => $booking->ends_at->toRfc3339String(),
-                    'timeZone' => $bookingPage->timezone,
-                ],
-                'attendees' => [[
-                    'email' => $booking->guest_email,
-                    'displayName' => $booking->guest_name,
-                ]],
-            ]),
+            fn (PendingRequest $request): Response => $request
+                ->withQueryParameters(['sendUpdates' => $awaitingApproval ? 'none' : 'all'])
+                ->post($url, $body),
         );
 
         if ($response->status() === 409) {
@@ -150,7 +165,33 @@ class GoogleCalendarClient implements GoogleCalendar
         return [
             'id' => (string) $response->json('id', $eventId),
             'html_link' => $response->json('htmlLink'),
+            'ical_uid' => $response->json('iCalUID'),
         ];
+    }
+
+    /**
+     * Promote a tentative request to a confirmed meeting and invite the guest.
+     */
+    public function confirmEvent(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        string $eventId,
+        Booking $booking,
+    ): void {
+        $this->send(
+            $connection,
+            fn (PendingRequest $request): Response => $request
+                ->withQueryParameters(['sendUpdates' => 'all'])
+                ->patch(self::API_URL.'/calendars/'.rawurlencode($calendarId).'/events/'.rawurlencode($eventId), [
+                    'status' => 'confirmed',
+                    'summary' => $booking->summary(),
+                    'description' => $this->eventDescription($booking),
+                    'attendees' => [[
+                        'email' => $booking->guest_email,
+                        'displayName' => $booking->guest_name,
+                    ]],
+                ]),
+        )->throw();
     }
 
     public function updateEventTime(
@@ -291,6 +332,23 @@ class GoogleCalendarClient implements GoogleCalendar
 
         return $connection->oauthToken
             ?? throw new RuntimeException('Google Calendar needs to be reconnected.');
+    }
+
+    /**
+     * What the owner reads in their agenda while the request waits.
+     */
+    private function requestDescription(Booking $booking): string
+    {
+        $description = "{$booking->guest_name} ({$booking->guest_email}) asked for this time through Life.";
+
+        if (filled($booking->notes)) {
+            $description .= "\n\n{$booking->notes}";
+        }
+
+        return $description
+            ."\n\nAccept: ".$booking->acceptUrl()
+            ."\nDecline: ".$booking->declineUrl()
+            ."\nSuggest another time: ".$booking->rescheduleUrl();
     }
 
     private function eventDescription(Booking $booking): string

@@ -15,6 +15,7 @@ use App\Livewire\PublicBookingPage;
 use App\Livewire\RecipeBrowser;
 use App\Livewire\Recipes;
 use App\Livewire\RescheduleBookingPage;
+use App\Livewire\RespondToBookingPage;
 use App\Livewire\ShoppingList;
 use App\Livewire\Today;
 use App\Livewire\Tracker;
@@ -31,6 +32,16 @@ Route::get('/meet/{bookingPage:slug}/cancel/{booking}', CancelBookingPage::class
 Route::get('/meet/{bookingPage:slug}/reschedule/{booking}', RescheduleBookingPage::class)
     ->middleware('signed')
     ->name('booking.reschedule');
+
+// Answer links carried in the tentative calendar event.
+Route::get('/meet/{bookingPage:slug}/accept/{booking}', RespondToBookingPage::class)
+    ->middleware('signed')
+    ->defaults('answer', 'accept')
+    ->name('booking.accept');
+Route::get('/meet/{bookingPage:slug}/decline/{booking}', RespondToBookingPage::class)
+    ->middleware('signed')
+    ->defaults('answer', 'decline')
+    ->name('booking.decline');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::get('/join/{code}', [AuthController::class, 'joinViaLink'])->name('login.invite.link');

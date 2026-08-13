@@ -3,11 +3,13 @@
 namespace App\Actions;
 
 use App\Contracts\GoogleCalendar;
+use App\Mail\BookingHoldPlaced;
 use App\Models\Booking;
 use App\Models\BookingPage;
 use App\Services\AvailabilityService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -54,22 +56,22 @@ class CreateBooking
                 'status' => Booking::STATUS_PENDING,
             ]);
 
-            // An approval page writes nothing to the calendar yet: the pending
-            // row holds the slot until its owner answers.
-            if ($bookingPage->requires_approval) {
-                return $booking;
-            }
-
             try {
+                // An approval page pencils the request into the owner's agenda
+                // as tentative; only accepting invites the guest.
                 $event = $this->googleCalendar->createEvent(
                     $destination,
                     $bookingPage,
                     $booking,
+                    $bookingPage->requires_approval,
                 );
 
                 $booking->update([
-                    'status' => Booking::STATUS_CONFIRMED,
+                    'status' => $bookingPage->requires_approval
+                        ? Booking::STATUS_PENDING
+                        : Booking::STATUS_CONFIRMED,
                     'google_event_id' => $event['id'],
+                    'google_ical_uid' => $event['ical_uid'] ?? null,
                     'google_event_link' => $event['html_link'],
                 ]);
             } catch (Throwable $exception) {
@@ -78,7 +80,18 @@ class CreateBooking
                 throw $exception;
             }
 
-            return $booking->refresh();
+            $booking->refresh();
+
+            // The owner's calendar holds the time; this puts the same hold on
+            // the guest's, since they were not invited to the tentative event.
+            if ($bookingPage->requires_approval) {
+                Mail::to($booking->guest_email)->send(new BookingHoldPlaced(
+                    $booking,
+                    $destination->connection->google_email,
+                ));
+            }
+
+            return $booking;
         });
     }
 }

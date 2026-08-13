@@ -28,13 +28,21 @@ interface GoogleCalendar
     ): array;
 
     /**
-     * @return array{id: string, html_link: string|null}
+     * @return array{id: string, html_link: string|null, ical_uid: string|null}
      */
     public function createEvent(
         BookingCalendarSelection $calendar,
         BookingPage $bookingPage,
         Booking $booking,
+        bool $awaitingApproval = false,
     ): array;
+
+    public function confirmEvent(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        string $eventId,
+        Booking $booking,
+    ): void;
 
     public function updateEventTime(
         GoogleCalendarConnection $connection,

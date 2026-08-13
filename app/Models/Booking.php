@@ -33,6 +33,7 @@ class Booking extends Model
         'guest_timezone',
         'status',
         'google_event_id',
+        'google_ical_uid',
         'google_calendar_id',
         'google_event_link',
         'cancelled_at',
@@ -108,6 +109,20 @@ class Booking extends Model
     public function rescheduleUrl(): string
     {
         return $this->signedGuestUrl('booking.reschedule');
+    }
+
+    /**
+     * Answer links for the calendar owner, written into the tentative event so
+     * they can respond from their agenda.
+     */
+    public function acceptUrl(): string
+    {
+        return $this->signedGuestUrl('booking.accept');
+    }
+
+    public function declineUrl(): string
+    {
+        return $this->signedGuestUrl('booking.decline');
     }
 
     private function signedGuestUrl(string $route): string
