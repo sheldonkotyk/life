@@ -11,3 +11,7 @@ Artisan::command('inspire', function () {
 Schedule::command('notifications:send-daily-digest')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+Schedule::command('bookings:sync-calendars')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();

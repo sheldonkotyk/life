@@ -52,6 +52,15 @@ interface GoogleCalendar
         string $timezone,
     ): void;
 
+    /**
+     * @return array{events: list<array<string, mixed>>, sync_token: string|null, expired: bool}
+     */
+    public function changedEvents(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        ?string $syncToken = null,
+    ): array;
+
     public function deleteEvent(
         GoogleCalendarConnection $connection,
         string $calendarId,

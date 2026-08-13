@@ -218,6 +218,57 @@ class GoogleCalendarClient implements GoogleCalendar
         )->throw();
     }
 
+    /**
+     * Events changed since the last poll. Without a token this asks for
+     * everything from yesterday onward and returns a token to continue from.
+     *
+     * @return array{events: list<array<string, mixed>>, sync_token: string|null, expired: bool}
+     */
+    public function changedEvents(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        ?string $syncToken = null,
+    ): array {
+        $url = self::API_URL.'/calendars/'.rawurlencode($calendarId).'/events';
+        $events = [];
+        $pageToken = null;
+        $nextSyncToken = null;
+
+        do {
+            // Google rejects a sync token whose other parameters changed, so
+            // the shape of this query has to stay identical between runs.
+            $query = ['showDeleted' => 'true', 'singleEvents' => 'true', 'maxResults' => 250];
+            $query += $syncToken
+                ? ['syncToken' => $syncToken]
+                : ['timeMin' => now()->subDay()->utc()->toRfc3339String()];
+
+            if ($pageToken) {
+                $query['pageToken'] = $pageToken;
+            }
+
+            $response = $this->send(
+                $connection,
+                fn (PendingRequest $request): Response => $request->get($url, $query),
+            );
+
+            // A token Google has forgotten: the caller starts over from scratch.
+            if ($response->status() === 410) {
+                return ['events' => [], 'sync_token' => null, 'expired' => true];
+            }
+
+            $response->throw();
+
+            foreach ($response->json('items', []) as $event) {
+                $events[] = $event;
+            }
+
+            $pageToken = $response->json('nextPageToken');
+            $nextSyncToken = $response->json('nextSyncToken') ?: $nextSyncToken;
+        } while ($pageToken);
+
+        return ['events' => $events, 'sync_token' => $nextSyncToken, 'expired' => false];
+    }
+
     public function deleteEvent(
         GoogleCalendarConnection $connection,
         string $calendarId,
