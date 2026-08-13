@@ -285,17 +285,21 @@ class BookingSettings extends Component
             ->with('oauthToken')
             ->orderBy('google_email')
             ->get();
-        $selections = $this->bookingPage
-            ? $this->bookingPage->calendarSelections()->with('connection:id,google_email')->get()
-            : collect();
+        // Each card describes that account's own page, not the one being edited.
+        $pages = auth()->user()->bookingPages()
+            ->with('calendarSelections')
+            ->get()
+            ->keyBy('google_calendar_connection_id');
 
-        $accountSummaries = $connections->map(function (GoogleCalendarConnection $connection) use ($selections): array {
+        $accountSummaries = $connections->map(function (GoogleCalendarConnection $connection) use ($pages): array {
             $token = $connection->oauthToken;
-            $accountSelections = $selections->where('google_calendar_connection_id', $connection->id);
+            $page = $pages->get($connection->id);
+            $accountSelections = $page?->calendarSelections ?? collect();
 
             return [
                 'connection' => $connection,
                 'token' => $token,
+                'page' => $page,
                 'calendars' => collect($this->calendars)->where('connection_id', $connection->id)->values()->all(),
                 'calendar_count' => collect($this->calendars)->where('connection_id', $connection->id)->count(),
                 'conflict_count' => $accountSelections->where('checks_conflicts', true)->count(),

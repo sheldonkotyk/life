@@ -55,8 +55,10 @@
                     @php
                         $account = $summary['connection'];
                         $token = $summary['token'];
+                        $accountPage = $summary['page'];
                     @endphp
-                    <flux:card wire:key="google-account-{{ $account->id }}" class="space-y-4">
+                    <div wire:key="google-account-{{ $account->id }}">
+                    <flux:card class="space-y-4">
                         <div class="flex items-start justify-between gap-4">
                             <div class="flex min-w-0 items-center gap-3">
                                 <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
@@ -114,6 +116,19 @@
                                     <div class="text-xs text-zinc-500">Receives bookings</div>
                                     <div class="mt-1 truncate font-medium text-zinc-800 dark:text-zinc-200">
                                         {{ $summary['destination']?->google_calendar_name ?? 'Not selected' }}
+                                    </div>
+                                </div>
+                                <div class="col-span-2">
+                                    <div class="text-xs text-zinc-500">This account's page</div>
+                                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                                        @if ($accountPage)
+                                            <flux:badge :color="$accountPage->is_enabled ? 'emerald' : 'zinc'" size="sm">
+                                                {{ $accountPage->is_enabled ? 'Published' : 'Draft' }}
+                                            </flux:badge>
+                                            <span class="truncate font-mono text-xs text-zinc-600 dark:text-zinc-300">/meet/{{ $accountPage->slug }}</span>
+                                        @else
+                                            <span class="text-xs text-zinc-500">Not set up yet</span>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -199,6 +214,7 @@
                             </div>
                         </div>
                     </flux:modal>
+                    </div>
                 @endforeach
             </div>
         @endif

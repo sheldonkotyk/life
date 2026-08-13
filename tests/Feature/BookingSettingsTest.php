@@ -411,3 +411,32 @@ it('rejects a public link with characters a URL cannot carry', function () {
         ->call('save')
         ->assertHasErrors('slug');
 });
+
+it('describes each account with its own page rather than the one being edited', function () {
+    Http::preventStrayRequests();
+    $user = loginUser();
+    $work = connectGoogleCalendar($user, 'work@example.test', 'work-token');
+    $personal = connectGoogleCalendar($user, 'personal@example.test', 'personal-token');
+
+    $workPage = BookingPage::factory()->for($user)->create([
+        'google_calendar_connection_id' => $work->id,
+        'slug' => 'work@example.test',
+        'is_enabled' => true,
+    ]);
+    BookingCalendarSelection::factory()->for($workPage)->for($work, 'connection')->receivesBookings()->create([
+        'google_calendar_name' => 'Work diary',
+    ]);
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/users/me/calendarList*' => Http::response(['items' => []]),
+    ]);
+
+    // The personal page opens for editing, but the work card still reports work.
+    $summaries = Livewire::test(BookingSettings::class)->viewData('accountSummaries')->keyBy('connection.id');
+
+    expect($summaries[$work->id]['destination']->google_calendar_name)->toBe('Work diary')
+        ->and($summaries[$work->id]['conflict_count'])->toBe(1)
+        ->and($summaries[$work->id]['page']->is_enabled)->toBeTrue()
+        ->and($summaries[$personal->id]['destination'])->toBeNull()
+        ->and($summaries[$personal->id]['page']->slug)->toBe('personal@example.test');
+});
