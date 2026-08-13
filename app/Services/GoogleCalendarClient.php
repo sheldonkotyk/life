@@ -544,7 +544,7 @@ class GoogleCalendarClient implements GoogleCalendar
      */
     private function requestDescription(Booking $booking): string
     {
-        $description = "{$booking->guest_name} ({$booking->guest_email}) asked for this time through Life.";
+        $description = "{$booking->guest_name} ({$booking->guest_email}) has requested a meeting with you.";
 
         if (filled($booking->notes)) {
             $description .= "\n\n{$booking->notes}";

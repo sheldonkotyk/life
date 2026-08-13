@@ -19,14 +19,6 @@
                 <div class="mt-1 text-sm text-zinc-500">{{ $booking->guest_timezone }}</div>
             </div>
         </flux:card>
-    @elseif ($booking->isAwaitingApproval())
-        <flux:card class="mx-auto max-w-xl text-center">
-            <flux:heading size="xl">This request hasn't been accepted yet</flux:heading>
-            <flux:text variant="subtle" class="mt-2">
-                {{ $bookingPage->user->name }} is still holding the time. Cancel the request if you need a different one.
-            </flux:text>
-            <flux:button :href="$booking->cancelUrl()" variant="ghost" class="mt-6">Cancel the request</flux:button>
-        </flux:card>
     @elseif ($booking->isCancelled() || $booking->isRejected())
         <flux:card class="mx-auto max-w-xl text-center">
             <flux:heading size="xl">{{ $booking->isRejected() ? 'This request was declined' : 'This meeting was cancelled' }}</flux:heading>
@@ -45,8 +37,14 @@
                     with {{ $bookingPage->user->name }} · {{ $bookingPage->duration_minutes }} minutes
                 </flux:text>
 
+                @if ($booking->isAwaitingApproval())
+                    <flux:callout icon="clock" class="mt-4">
+                        This time is still held while it waits to be accepted. Moving it keeps the hold and the request.
+                    </flux:callout>
+                @endif
+
                 <div class="mt-5 rounded-xl bg-zinc-50 p-4 text-sm dark:bg-zinc-800">
-                    <div class="text-zinc-500">Currently booked for</div>
+                    <div class="text-zinc-500">{{ $booking->isAwaitingApproval() ? 'Currently held for' : 'Currently booked for' }}</div>
                     <div class="mt-1 font-medium text-zinc-900 dark:text-white">
                         {{ $booking->starts_at->setTimezone($booking->guest_timezone)->format('l, F j, Y · g:i A') }}
                     </div>

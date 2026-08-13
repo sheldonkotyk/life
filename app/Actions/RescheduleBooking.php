@@ -3,10 +3,12 @@
 namespace App\Actions;
 
 use App\Contracts\GoogleCalendar;
+use App\Mail\BookingHoldPlaced;
 use App\Models\Booking;
 use App\Services\AvailabilityService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -22,12 +24,6 @@ class RescheduleBooking
         if ($booking->isCancelled()) {
             throw ValidationException::withMessages([
                 'selectedStart' => 'This meeting was cancelled and can no longer be moved.',
-            ]);
-        }
-
-        if ($booking->isAwaitingApproval()) {
-            throw ValidationException::withMessages([
-                'selectedStart' => 'This request has not been accepted yet, so it cannot be moved. Cancel it and book another time instead.',
             ]);
         }
 
@@ -69,8 +65,19 @@ class RescheduleBooking
             );
 
             $booking->fill(['rescheduled_at' => now()])->save();
+            $booking->refresh();
 
-            return $booking->refresh();
+            // A held request has no invitation yet, so the guest's calendar is
+            // moved by re-sending the hold rather than by Google.
+            if ($booking->isAwaitingApproval()) {
+                Mail::to($booking->guest_email)->send(new BookingHoldPlaced(
+                    $booking,
+                    $connection->google_email,
+                    moved: true,
+                ));
+            }
+
+            return $booking;
         });
     }
 }

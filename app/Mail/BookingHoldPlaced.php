@@ -19,12 +19,16 @@ class BookingHoldPlaced extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Booking $booking, public string $organiserEmail) {}
+    public function __construct(
+        public Booking $booking,
+        public string $organiserEmail,
+        public bool $moved = false,
+    ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Holding '.$this->booking->starts_at
+            subject: ($this->moved ? 'Moved to ' : 'Holding ').$this->booking->starts_at
                 ->setTimezone($this->booking->guest_timezone)
                 ->format('D, M j · g:i A').' for you',
         );
@@ -37,6 +41,7 @@ class BookingHoldPlaced extends Mailable
             with: [
                 'booking' => $this->booking,
                 'bookingPage' => $this->booking->bookingPage,
+                'moved' => $this->moved,
             ],
         );
     }
@@ -48,7 +53,7 @@ class BookingHoldPlaced extends Mailable
     {
         return [
             Attachment::fromData(
-                fn (): string => IcsInvite::hold($this->booking, $this->organiserEmail),
+                fn (): string => IcsInvite::hold($this->booking, $this->organiserEmail, $this->moved ? 1 : 0),
                 'invite.ics',
             )->withMime('text/calendar; method=REQUEST; charset=UTF-8'),
         ];

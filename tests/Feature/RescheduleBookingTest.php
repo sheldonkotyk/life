@@ -1,14 +1,17 @@
 <?php
 
 use App\Livewire\RescheduleBookingPage;
+use App\Mail\BookingHoldPlaced;
 use App\Models\Booking;
 use App\Models\BookingCalendarSelection;
 use App\Models\BookingPage;
 use App\Models\User;
 use App\Services\AvailabilityService;
+use App\Services\IcsInvite;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -161,6 +164,45 @@ it('keeps the original time when Google refuses the patch', function () {
 
     expect($booking->starts_at->toIso8601String())->toBe('2026-08-12T09:00:00+00:00')
         ->and($booking->rescheduled_at)->toBeNull();
+});
+
+it('moves a held request without accepting it', function () {
+    Http::preventStrayRequests();
+    Mail::fake();
+    $booking = bookingToMove([
+        'status' => Booking::STATUS_PENDING,
+        'google_ical_uid' => 'lifebooking-event@google.com',
+    ]);
+    $booking->bookingPage->update(['requires_approval' => true]);
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/freeBusy' => Http::response(['calendars' => ['primary' => ['busy' => []]]]),
+        'www.googleapis.com/calendar/v3/calendars/*' => Http::response(['id' => 'lifebooking-event']),
+    ]);
+
+    Livewire::test(RescheduleBookingPage::class, [
+        'bookingPage' => $booking->bookingPage,
+        'booking' => $booking,
+    ])
+        ->set('selectedDate', '2026-08-12')
+        ->call('selectSlot', '2026-08-12T10:00:00+00:00')
+        ->call('reschedule')
+        ->assertHasNoErrors();
+
+    $booking->refresh();
+
+    // The hold moves; it is still a request.
+    expect($booking->starts_at->toIso8601String())->toBe('2026-08-12T10:00:00+00:00')
+        ->and($booking->status)->toBe(Booking::STATUS_PENDING)
+        ->and($booking->rescheduled_at)->not->toBeNull();
+
+    Http::assertSent(fn (Request $request): bool => $request->method() === 'PATCH');
+
+    // The guest's calendar is moved by a fresh hold, at a higher sequence.
+    Mail::assertSent(BookingHoldPlaced::class, function (BookingHoldPlaced $mail): bool {
+        return $mail->moved
+            && str_contains(IcsInvite::hold($mail->booking, $mail->organiserEmail, 1), 'SEQUENCE:1');
+    });
 });
 
 it('will not move a cancelled booking', function () {

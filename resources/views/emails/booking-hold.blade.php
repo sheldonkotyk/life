@@ -2,8 +2,10 @@
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f6f7f9; margin:0; padding:24px;">
     <div style="max-width:480px; margin:0 auto; background:#fff; border-radius:12px; padding:32px;">
-        <h1 style="font-size:20px; margin:0 0 16px;">Your request is with {{ $bookingPage->user->name }}</h1>
-        <p>They're holding this time while they confirm. The attached invitation puts it on your calendar as tentative so nothing else takes the slot.</p>
+        <h1 style="font-size:20px; margin:0 0 16px;">
+            {{ $moved ? $bookingPage->user->name.' suggested a different time' : 'Your request is with '.$bookingPage->user->name }}
+        </h1>
+        <p>{{ $moved ? 'The hold on your calendar has moved to the time below, and is still waiting to be confirmed.' : "They're holding this time while they confirm. The attached invitation puts it on your calendar as tentative so nothing else takes the slot." }}</p>
 
         <div style="margin:24px 0; padding:16px; background:#f6f7f9; border-radius:8px;">
             <div style="font-weight:600;">{{ $booking->guest_title ?: $bookingPage->title }}</div>

@@ -323,12 +323,20 @@
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <flux:heading size="lg">Publish</flux:heading>
-                        <flux:text variant="subtle">Your link is {{ $publicUrl }}</flux:text>
+                        <flux:text variant="subtle">Share this link with anyone who needs time with you.</flux:text>
                     </div>
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
                         <flux:switch wire:model="requiresApproval" label="Approve each request" />
                         <flux:switch wire:model="isEnabled" label="Accept bookings" />
                     </div>
+                </div>
+
+                {{-- Its own row: a full url needs the width. --}}
+                <div class="flex items-center gap-2">
+                    <flux:input readonly copyable :value="$publicUrl" class="min-w-0 flex-1" />
+                    <flux:button :href="$publicUrl" target="_blank" variant="ghost" icon="arrow-top-right-on-square">
+                        Open
+                    </flux:button>
                 </div>
 
                 <div class="flex justify-end">

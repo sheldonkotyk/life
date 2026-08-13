@@ -10,14 +10,14 @@ use App\Models\Booking;
  */
 class IcsInvite
 {
-    public static function hold(Booking $booking, string $organiserEmail): string
+    public static function hold(Booking $booking, string $organiserEmail, int $sequence = 0): string
     {
-        return self::build($booking, $organiserEmail, method: 'REQUEST', status: 'TENTATIVE', sequence: 0);
+        return self::build($booking, $organiserEmail, method: 'REQUEST', status: 'TENTATIVE', sequence: $sequence);
     }
 
     public static function release(Booking $booking, string $organiserEmail): string
     {
-        return self::build($booking, $organiserEmail, method: 'CANCEL', status: 'CANCELLED', sequence: 1);
+        return self::build($booking, $organiserEmail, method: 'CANCEL', status: 'CANCELLED', sequence: 2);
     }
 
     private static function build(
