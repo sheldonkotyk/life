@@ -58,6 +58,9 @@ class RescheduleBookingPage extends Component
         $validated = $this->validate([
             'selectedDate' => ['required', 'date_format:Y-m-d'],
             'selectedStart' => ['required', 'date'],
+        ], [
+            'selectedStart.required' => 'Choose a time for your meeting.',
+            'selectedDate.required' => 'Choose a date for your meeting.',
         ]);
 
         $startsAt = CarbonImmutable::parse($validated['selectedStart']);

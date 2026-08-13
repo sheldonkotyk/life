@@ -70,6 +70,12 @@ class PublicBookingPage extends Component
             'guestEmail' => ['required', 'email', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'guestTimezone' => ['required', 'timezone'],
+        ], [
+            'selectedDate.required' => 'Choose a date for your meeting.',
+            'selectedStart.required' => 'Choose a time for your meeting.',
+            'guestName.required' => 'Please tell us your name.',
+            'guestEmail.required' => 'Please give us an email for the invitation.',
+            'guestEmail.email' => 'That email address does not look right.',
         ]);
 
         $startsAt = CarbonImmutable::parse($validated['selectedStart']);
