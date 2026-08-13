@@ -27,8 +27,7 @@ class WatchCalendars
     {
         $address = config('services.google.calendar_webhook_url') ?: route('google-calendar.webhook');
 
-        // Google refuses anything but https, and never localhost.
-        if (! str_starts_with($address, 'https://')) {
+        if (! $this->isReachableAddress($address)) {
             return ['watched' => 0, 'renewed' => 0, 'failed' => 0];
         }
 
@@ -59,6 +58,30 @@ class WatchCalendars
         }
 
         return ['watched' => $watched, 'renewed' => $renewed, 'failed' => $failed];
+    }
+
+    /**
+     * Google accepts a subscription without checking it can reach the address,
+     * so a development APP_URL will happily open channels that can never be
+     * delivered to. Only a public https host is worth subscribing.
+     */
+    private function isReachableAddress(string $address): bool
+    {
+        if (! str_starts_with($address, 'https://')) {
+            return false;
+        }
+
+        $host = mb_strtolower((string) parse_url($address, PHP_URL_HOST));
+
+        if (! str_contains($host, '.') || filter_var($host, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+
+        return ! in_array(
+            mb_strtolower((string) mb_strrchr($host, '.')),
+            ['.test', '.local', '.localhost', '.invalid', '.example', '.internal'],
+            true,
+        );
     }
 
     private function renew(BookingCalendarSelection $destination, CalendarSyncState $state, string $address): void
