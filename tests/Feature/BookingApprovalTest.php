@@ -4,10 +4,12 @@ use App\Livewire\BookingSettings;
 use App\Livewire\PublicBookingPage;
 use App\Mail\BookingHoldPlaced;
 use App\Mail\BookingHoldReleased;
+use App\Mail\BookingReceived;
 use App\Models\Booking;
 use App\Models\BookingCalendarSelection;
 use App\Models\BookingPage;
 use App\Services\AvailabilityService;
+use App\Services\IcsInvite;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -272,4 +274,98 @@ it('refuses an answer link that was not signed', function () {
     ], false))->assertForbidden();
 
     expect($booking->refresh()->status)->toBe(Booking::STATUS_PENDING);
+});
+
+it('emails the owner about a request with the same answer links', function () {
+    Http::preventStrayRequests();
+    $page = approvalPage();
+
+    Http::fake(function (Request $request) {
+        if (str_contains($request->url(), '/events')) {
+            return Http::response(['id' => 'lifebooking1', 'iCalUID' => 'lifebooking1@google.com']);
+        }
+
+        return Http::response(['calendars' => ['primary' => ['busy' => []]]]);
+    });
+
+    Livewire::test(PublicBookingPage::class, ['bookingPage' => $page])
+        ->set('selectedDate', '2026-08-12')
+        ->set('selectedStart', '2026-08-12T09:00:00+00:00')
+        ->set('guestName', 'Alex Guest')
+        ->set('guestEmail', 'alex@example.test')
+        ->call('book')
+        ->assertHasNoErrors();
+
+    $booking = Booking::sole();
+
+    Mail::assertSent(BookingReceived::class, function (BookingReceived $mail) use ($page, $booking): bool {
+        return $mail->hasTo($page->user->email)
+            && str_contains($mail->render(), $booking->acceptUrl())
+            && str_contains($mail->render(), $booking->declineUrl());
+    });
+});
+
+it('emails the owner about a booking that needed no approval', function () {
+    Http::preventStrayRequests();
+    $page = approvalPage();
+    $page->update(['requires_approval' => false]);
+
+    Http::fake(function (Request $request) {
+        if (str_contains($request->url(), '/events')) {
+            return Http::response(['id' => 'lifebooking1', 'iCalUID' => 'lifebooking1@google.com']);
+        }
+
+        return Http::response(['calendars' => ['primary' => ['busy' => []]]]);
+    });
+
+    Livewire::test(PublicBookingPage::class, ['bookingPage' => $page->fresh()])
+        ->set('selectedDate', '2026-08-12')
+        ->set('selectedStart', '2026-08-12T09:00:00+00:00')
+        ->set('guestName', 'Alex Guest')
+        ->set('guestEmail', 'alex@example.test')
+        ->call('book')
+        ->assertHasNoErrors();
+
+    Mail::assertSent(BookingReceived::class);
+    Mail::assertNotSent(BookingHoldPlaced::class);
+});
+
+it('respects an owner who has turned email notifications off', function () {
+    Http::preventStrayRequests();
+    $page = approvalPage();
+    $page->user->update(['notification_preferences' => ['email' => false]]);
+
+    Http::fake(function (Request $request) {
+        if (str_contains($request->url(), '/events')) {
+            return Http::response(['id' => 'lifebooking1', 'iCalUID' => 'lifebooking1@google.com']);
+        }
+
+        return Http::response(['calendars' => ['primary' => ['busy' => []]]]);
+    });
+
+    Livewire::test(PublicBookingPage::class, ['bookingPage' => $page])
+        ->set('selectedDate', '2026-08-12')
+        ->set('selectedStart', '2026-08-12T09:00:00+00:00')
+        ->set('guestName', 'Alex Guest')
+        ->set('guestEmail', 'alex@example.test')
+        ->call('book')
+        ->assertHasNoErrors();
+
+    Mail::assertNotSent(BookingReceived::class);
+    Mail::assertSent(BookingHoldPlaced::class);
+});
+
+it('gives the guest a way to change the time from their held entry', function () {
+    $page = approvalPage();
+    $booking = Booking::factory()->for($page)->create([
+        'status' => Booking::STATUS_PENDING,
+        'google_ical_uid' => 'lifebooking1@google.com',
+    ]);
+
+    $ics = IcsInvite::hold($booking, 'owner@example.test');
+
+    expect($ics)->toContain('UID:lifebooking1@google.com')
+        ->and($ics)->toContain('STATUS:TENTATIVE')
+        ->and($ics)->toContain('METHOD:REQUEST')
+        ->and($ics)->toContain(str_replace(['\\', ',', ';'], ['\\\\', '\,', '\;'], $booking->rescheduleUrl()));
 });

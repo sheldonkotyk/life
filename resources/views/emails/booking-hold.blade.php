@@ -14,9 +14,10 @@
             <div style="margin-top:4px; font-size:13px; color:#6b7280;">{{ $booking->guest_timezone }}</div>
         </div>
 
-        <p style="font-size:14px; color:#374151;">You'll get a confirmed invitation once they accept. Changed your mind?</p>
+        <p style="font-size:14px; color:#374151;">You'll get a confirmed invitation once they accept. Need to change it?</p>
         <p style="margin:16px 0;">
-            <a href="{{ $booking->cancelUrl() }}" style="display:inline-block; background:#111827; color:#fff; padding:12px 20px; border-radius:8px; text-decoration:none; font-weight:600;">Cancel the request</a>
+            <a href="{{ $booking->rescheduleUrl() }}" style="display:inline-block; background:#111827; color:#fff; padding:12px 20px; border-radius:8px; text-decoration:none; font-weight:600;">Pick a different time</a>
+            <a href="{{ $booking->cancelUrl() }}" style="display:inline-block; margin-left:8px; background:#f3f4f6; color:#111827; padding:12px 20px; border-radius:8px; text-decoration:none; font-weight:600;">Cancel the request</a>
         </p>
     </div>
 </body>

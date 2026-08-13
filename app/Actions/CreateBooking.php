@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Contracts\GoogleCalendar;
 use App\Mail\BookingHoldPlaced;
+use App\Mail\BookingReceived;
 use App\Models\Booking;
 use App\Models\BookingPage;
 use App\Services\AvailabilityService;
@@ -89,6 +90,13 @@ class CreateBooking
                     $booking,
                     $destination->connection->google_email,
                 ));
+            }
+
+            // The calendar entry alone is easy to miss, so the owner is told
+            // directly, with the same links the entry carries.
+            $owner = $bookingPage->user;
+            if ($owner->wantsNotificationOn('email') && filled($owner->email)) {
+                Mail::to($owner->email)->send(new BookingReceived($booking));
             }
 
             return $booking;

@@ -57,12 +57,14 @@ class IcsInvite
 
     private static function description(Booking $booking): string
     {
+        $links = 'Change the time: '.$booking->rescheduleUrl()
+            ."\nCancel: ".$booking->cancelUrl();
+
         if ($booking->isAwaitingApproval()) {
-            return 'Holding this time while '.$booking->bookingPage->user->name.' confirms. '
-                .'Need to cancel the request? '.$booking->cancelUrl();
+            return 'Holding this time while '.$booking->bookingPage->user->name." confirms.\n\n".$links;
         }
 
-        return 'Booked through Life. Need to cancel? '.$booking->cancelUrl();
+        return "Booked through Life.\n\n".$links;
     }
 
     private static function escape(string $value): string
