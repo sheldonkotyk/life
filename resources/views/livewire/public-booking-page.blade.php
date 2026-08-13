@@ -65,13 +65,13 @@
                         <flux:label>Choose a time</flux:label>
                         @if ($calendarError)
                             <flux:callout color="red" icon="exclamation-triangle">{{ $calendarError }}</flux:callout>
-                        @elseif ($slots === [])
+                        @elseif ($availableSlots === [])
                             <div class="rounded-xl border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700">
                                 No times are available on this day. Try another date.
                             </div>
                         @else
                             <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                                @foreach ($slots as $slot)
+                                @foreach ($availableSlots as $slot)
                                     <flux:button
                                         wire:key="slot-{{ $slot['start'] }}"
                                         type="button"

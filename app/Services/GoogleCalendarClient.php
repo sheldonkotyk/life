@@ -153,6 +153,30 @@ class GoogleCalendarClient implements GoogleCalendar
         ];
     }
 
+    public function updateEventTime(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        string $eventId,
+        Booking $booking,
+        string $timezone,
+    ): void {
+        $this->send(
+            $connection,
+            fn (PendingRequest $request): Response => $request
+                ->withQueryParameters(['sendUpdates' => 'all'])
+                ->patch(self::API_URL.'/calendars/'.rawurlencode($calendarId).'/events/'.rawurlencode($eventId), [
+                    'start' => [
+                        'dateTime' => $booking->starts_at->toRfc3339String(),
+                        'timeZone' => $timezone,
+                    ],
+                    'end' => [
+                        'dateTime' => $booking->ends_at->toRfc3339String(),
+                        'timeZone' => $timezone,
+                    ],
+                ]),
+        )->throw();
+    }
+
     public function deleteEvent(
         GoogleCalendarConnection $connection,
         string $calendarId,
@@ -277,6 +301,8 @@ class GoogleCalendarClient implements GoogleCalendar
             $description .= "\n\nNotes:\n{$booking->notes}";
         }
 
-        return $description."\n\nNeed to cancel? ".$booking->cancelUrl();
+        return $description
+            ."\n\nNeed a different time? ".$booking->rescheduleUrl()
+            ."\nNeed to cancel? ".$booking->cancelUrl();
     }
 }

@@ -246,3 +246,29 @@ it('rejects a slot that became busy before submission', function () {
 
     expect(Booking::count())->toBe(0);
 });
+
+it('renders the available times as buttons', function () {
+    CarbonImmutable::setTestNow('2026-08-11 12:00:00 UTC');
+    Http::preventStrayRequests();
+
+    $user = User::factory()->create();
+    $connection = connectGoogleCalendar($user);
+    $page = BookingPage::factory()->for($user)->create([
+        'timezone' => 'UTC',
+        'minimum_notice_hours' => 0,
+        'buffer_minutes' => 0,
+        'availability_starts_at' => '09:00',
+        'availability_ends_at' => '10:00',
+        'available_days' => [3],
+    ]);
+    BookingCalendarSelection::factory()->for($page)->for($connection, 'connection')->receivesBookings()->create();
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/freeBusy' => Http::response(['calendars' => ['primary' => ['busy' => []]]]),
+    ]);
+
+    Livewire::test(PublicBookingPage::class, ['bookingPage' => $page])
+        ->set('selectedDate', '2026-08-12')
+        ->assertSee('9:00 AM')
+        ->assertSee('9:30 AM');
+});

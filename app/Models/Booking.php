@@ -33,6 +33,7 @@ class Booking extends Model
         'google_calendar_id',
         'google_event_link',
         'cancelled_at',
+        'rescheduled_at',
     ];
 
     protected $attributes = [
@@ -45,6 +46,7 @@ class Booking extends Model
             'starts_at' => 'immutable_datetime',
             'ends_at' => 'immutable_datetime',
             'cancelled_at' => 'immutable_datetime',
+            'rescheduled_at' => 'immutable_datetime',
         ];
     }
 
@@ -64,12 +66,22 @@ class Booking extends Model
     }
 
     /**
-     * A guest keeps no account, so the cancel link is signed and travels with
-     * the calendar invitation.
+     * A guest keeps no account, so their links are signed and travel with the
+     * calendar invitation.
      */
     public function cancelUrl(): string
     {
-        return URL::signedRoute('booking.cancel', [
+        return $this->signedGuestUrl('booking.cancel');
+    }
+
+    public function rescheduleUrl(): string
+    {
+        return $this->signedGuestUrl('booking.reschedule');
+    }
+
+    private function signedGuestUrl(string $route): string
+    {
+        return URL::signedRoute($route, [
             'bookingPage' => $this->bookingPage->slug,
             'booking' => $this->id,
         ]);

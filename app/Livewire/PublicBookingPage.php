@@ -119,7 +119,7 @@ class PublicBookingPage extends Component
         }
 
         return view('livewire.public-booking-page', [
-            'slots' => $slots,
+            'availableSlots' => $slots,
             'calendarError' => $calendarError,
             'minimumDate' => CarbonImmutable::now($this->bookingPage->timezone)->toDateString(),
             'maximumDate' => CarbonImmutable::now($this->bookingPage->timezone)

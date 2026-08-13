@@ -333,7 +333,13 @@
                         <div class="flex items-center gap-4 sm:justify-end">
                             <div class="text-sm text-zinc-600 dark:text-zinc-300 sm:text-right">
                                 {{ $upcoming->starts_at->setTimezone($bookingPage->timezone)->format('M j, Y · g:i A') }}
+                                @if ($upcoming->rescheduled_at)
+                                    <div class="text-xs text-zinc-500">Rescheduled</div>
+                                @endif
                             </div>
+                            <flux:button :href="$upcoming->rescheduleUrl()" size="sm" variant="subtle">
+                                Reschedule
+                            </flux:button>
                             <flux:button
                                 wire:click="cancelBooking({{ $upcoming->id }})"
                                 wire:confirm="Cancel this meeting with {{ $upcoming->guest_name }}?"

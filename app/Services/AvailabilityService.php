@@ -14,9 +14,10 @@ class AvailabilityService
     public function __construct(private GoogleCalendar $googleCalendar) {}
 
     /**
+     * @param  Booking|null  $ignoring  A booking being rescheduled, whose own time should not block it.
      * @return list<array{start: string, end: string, label: string}>
      */
-    public function slots(BookingPage $bookingPage, string $date): array
+    public function slots(BookingPage $bookingPage, string $date, ?Booking $ignoring = null): array
     {
         $bookingPage->loadMissing([
             'availabilityCalendarSelections.connection.oauthToken',
@@ -62,10 +63,15 @@ class AvailabilityService
             ];
         }
 
+        if ($ignoring) {
+            $busyPeriods = $this->withoutOwnEvent($busyPeriods, $ignoring);
+        }
+
         $localBookings = $bookingPage->bookings()
             ->whereIn('status', [Booking::STATUS_PENDING, Booking::STATUS_CONFIRMED])
             ->where('starts_at', '<', $windowEndsAt->utc())
             ->where('ends_at', '>', $windowStartsAt->utc())
+            ->when($ignoring, fn ($query) => $query->whereKeyNot($ignoring->getKey()))
             ->get(['starts_at', 'ends_at']);
 
         foreach ($localBookings as $booking) {
@@ -95,6 +101,26 @@ class AvailabilityService
         }
 
         return $slots;
+    }
+
+    /**
+     * Drop the busy period Google reports for the booking's own event, so a
+     * guest rescheduling is not blocked by the meeting they are moving.
+     *
+     * Freebusy returns no event ids, so only an exact match is dropped: a
+     * period merged with a neighbouring event stays busy rather than risk
+     * freeing time that is genuinely taken.
+     *
+     * @param  list<array{start: CarbonImmutable, end: CarbonImmutable}>  $busyPeriods
+     * @return list<array{start: CarbonImmutable, end: CarbonImmutable}>
+     */
+    private function withoutOwnEvent(array $busyPeriods, Booking $booking): array
+    {
+        return array_values(array_filter(
+            $busyPeriods,
+            fn (array $period): bool => ! $period['start']->eq($booking->starts_at)
+                || ! $period['end']->eq($booking->ends_at),
+        ));
     }
 
     /**

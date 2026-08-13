@@ -36,6 +36,14 @@ interface GoogleCalendar
         Booking $booking,
     ): array;
 
+    public function updateEventTime(
+        GoogleCalendarConnection $connection,
+        string $calendarId,
+        string $eventId,
+        Booking $booking,
+        string $timezone,
+    ): void;
+
     public function deleteEvent(
         GoogleCalendarConnection $connection,
         string $calendarId,
