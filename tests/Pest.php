@@ -69,6 +69,29 @@ function connectGoogleCalendar(
     return $connection->load('oauthToken');
 }
 
+/**
+ * Wait for something to become true, polling until it does. Browser tests drive
+ * Livewire round trips whose timing varies with machine load, and a fixed sleep
+ * either fails under load or wastes the difference.
+ *
+ * The condition is expected to give the browser a turn — sleeping alone starves
+ * the requests it is waiting on.
+ */
+function waitUntil(callable $condition, int $timeoutMs = 8000, int $everyMs = 250): bool
+{
+    $deadline = microtime(true) + ($timeoutMs / 1000);
+
+    do {
+        if ($condition()) {
+            return true;
+        }
+
+        usleep($everyMs * 1000);
+    } while (microtime(true) < $deadline);
+
+    return false;
+}
+
 function appleJwt(string $sub, array $extra = []): string
 {
     $payload = base64_encode(json_encode(['sub' => $sub] + $extra));

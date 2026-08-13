@@ -35,6 +35,13 @@ function jsClickByText(string $text): string
     return "document.querySelectorAll('button').forEach(b => { if (b.textContent.trim() === '{$escaped}') b.click(); })";
 }
 
+/** Visit and wait for the navigation to land, so assertions cannot be
+ * evaluated against the document being navigated away from. */
+function visitPlanner(string $url = '/meal-plan')
+{
+    return visit($url)->assertPathIs('/meal-plan');
+}
+
 function setupPlannerHousehold(): array
 {
     $user = loginUser();
@@ -47,7 +54,7 @@ function setupPlannerHousehold(): array
 it('shifts forward and back through weeks with Prev / Next / Today', function () {
     setupPlannerHousehold();
 
-    $page = visit('/meal-plan');
+    $page = visitPlanner();
 
     $page->assertSee('May 8 – May 14, 2026')->assertNoJavaScriptErrors();
 
@@ -69,7 +76,7 @@ it('shifts forward and back through weeks with Prev / Next / Today', function ()
 it('toggles between Plan and Attendance modes', function () {
     setupPlannerHousehold();
 
-    $page = visit('/meal-plan');
+    $page = visitPlanner('/meal-plan?mode=plan');
 
     $page->assertSee("Plan meals and mark who's eating.")->assertNoJavaScriptErrors();
 
@@ -88,7 +95,7 @@ it('creates a new meal plan via the modal Save button', function () {
         'servings' => 4,
     ]);
 
-    $page = visit('/meal-plan');
+    $page = visitPlanner();
 
     $page->assertNoJavaScriptErrors();
     $page->script(jsClickWire('openSlot'));
@@ -109,7 +116,7 @@ it('creates a new meal plan via the modal Save button', function () {
 it('cancels the modal without persisting changes', function () {
     setupPlannerHousehold();
 
-    $page = visit('/meal-plan');
+    $page = visitPlanner();
 
     $page->assertNoJavaScriptErrors();
     $page->script(jsClickWire('openSlot'));
@@ -130,7 +137,7 @@ it('removes an existing meal plan via the Remove button', function () {
     ]);
     $plan->attendees()->attach($ava->id, ['status' => 'eating']);
 
-    $page = visit('/meal-plan');
+    $page = visitPlanner();
 
     $page->assertSee('Pancakes')->assertNoJavaScriptErrors();
     $page->script(jsClickWire("openSlot('2026-05-08', 'breakfast', {$plan->id}"));
@@ -146,55 +153,74 @@ it('removes an existing meal plan via the Remove button', function () {
 it('marks a member as not attending a slot via the attendance grid', function () {
     [$user, $ava] = setupPlannerHousehold();
 
-    $page = visit('/meal-plan');
+    $page = visitPlanner();
 
     $page->script(jsClickByText('Attendance'));
+    // The grid only exists once Livewire has answered the mode switch.
+    $page->assertSee("Check the meals you'll be there for this week.");
     $page->assertNoJavaScriptErrors();
     $page->script("document.querySelector('[wire\\\\:click^=\"setAttending(\\'2026-05-08\\', \\'breakfast\\'\"]').click()");
-    usleep(500_000);
-    $page->assertNoJavaScriptErrors();
 
     $memberId = $user->familyMember?->id ?? $ava->id;
-    expect(FamilyMemberUnavailability::where('family_member_id', $memberId)
-        ->where('date', '2026-05-08')
-        ->where('slot', 'breakfast')
-        ->exists())->toBeTrue();
+    $marked = waitUntil(function () use ($page, $memberId): bool {
+        $page->script('void 0'); // give the pending Livewire request a turn
+
+        return FamilyMemberUnavailability::where('family_member_id', $memberId)
+            ->where('date', '2026-05-08')
+            ->where('slot', 'breakfast')
+            ->exists();
+    });
+
+    $page->assertNoJavaScriptErrors();
+    expect($marked)->toBeTrue();
 });
 
 it('skips a whole day with the row Skip button', function () {
     [$user, $ava] = setupPlannerHousehold();
 
-    $page = visit('/meal-plan');
+    $page = visitPlanner();
 
     $page->script(jsClickByText('Attendance'));
+    $page->assertSee("Check the meals you'll be there for this week.");
     $page->assertNoJavaScriptErrors();
     // Both mobile and desktop layouts contain the button; click them all —
     // setDayAttending is idempotent (firstOrCreate / delete by key).
     $page->script("document.querySelectorAll('[wire\\\\:click^=\"setDayAttending(\\'2026-05-08\\'\"]').forEach(e => e.click())");
-    usleep(1_500_000);
-    $page->assertNoJavaScriptErrors();
 
     $memberId = $user->familyMember?->id ?? $ava->id;
-    expect(FamilyMemberUnavailability::where('family_member_id', $memberId)
-        ->where('date', '2026-05-08')
-        ->count())->toBe(3); // breakfast, lunch, dinner
+    $skipped = waitUntil(function () use ($page, $memberId): bool {
+        $page->script('void 0');
+
+        return FamilyMemberUnavailability::where('family_member_id', $memberId)
+            ->where('date', '2026-05-08')
+            ->count() === 3; // breakfast, lunch, dinner
+    });
+
+    $page->assertNoJavaScriptErrors();
+    expect($skipped)->toBeTrue();
 });
 
 it('skips an entire slot column with the column Skip all button', function () {
     [$user, $ava] = setupPlannerHousehold();
 
-    $page = visit('/meal-plan');
+    $page = visitPlanner();
 
     $page->script(jsClickByText('Attendance'));
+    $page->assertSee("Check the meals you'll be there for this week.");
     $page->assertNoJavaScriptErrors();
     $page->script("document.querySelector('[wire\\\\:click^=\"setSlotAttending(\\'breakfast\\'\"]').click()");
-    usleep(500_000);
-    $page->assertNoJavaScriptErrors();
 
     $memberId = $user->familyMember?->id ?? $ava->id;
-    expect(FamilyMemberUnavailability::where('family_member_id', $memberId)
-        ->where('slot', 'breakfast')
-        ->count())->toBe(7); // every day in the week
+    $skipped = waitUntil(function () use ($page, $memberId): bool {
+        $page->script('void 0');
+
+        return FamilyMemberUnavailability::where('family_member_id', $memberId)
+            ->where('slot', 'breakfast')
+            ->count() === 7; // every day in the week
+    });
+
+    $page->assertNoJavaScriptErrors();
+    expect($skipped)->toBeTrue();
 });
 
 it('renders the desktop matrix with day columns and slot rows', function () {

@@ -6,7 +6,7 @@ it('renders the edit-meal modal body when an empty slot is clicked', function ()
     $user = loginUser();
     FamilyMember::create(['household_id' => $user->household_id, 'name' => 'Ava']);
 
-    $page = visit('/meal-plan');
+    $page = visit('/meal-plan')->assertPathIs('/meal-plan');
 
     $page->assertSee('Meal Plan')
         ->assertNoJavaScriptErrors()

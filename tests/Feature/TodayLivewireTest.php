@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Planner;
 use App\Livewire\Today;
 use App\Models\FamilyMember;
 use App\Models\MealPlan;
@@ -135,4 +136,13 @@ it('shows undated todos assigned to me', function () {
     Livewire::test(Today::class)
         ->assertSee('Assigned to me')
         ->assertDontSee('Unassigned and undated');
+});
+
+it('opens the planner in plan mode by default', function () {
+    loginUser();
+
+    Livewire::test(Planner::class)
+        ->assertSet('mode', 'plan')
+        ->set('mode', 'attendance')
+        ->assertSet('mode', 'attendance');
 });
