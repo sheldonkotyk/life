@@ -19,7 +19,7 @@ class CreateBooking
     ) {}
 
     /**
-     * @param  array{guest_name: string, guest_email: string, notes: string|null, guest_timezone: string}  $guest
+     * @param  array{guest_name: string, guest_email: string, guest_title: string|null, notes: string|null, guest_timezone: string}  $guest
      */
     public function execute(BookingPage $bookingPage, CarbonImmutable $startsAt, array $guest): Booking
     {

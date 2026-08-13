@@ -272,3 +272,85 @@ it('renders the available times as buttons', function () {
         ->assertSee('9:00 AM')
         ->assertSee('9:30 AM');
 });
+
+it('lets the guest title the meeting and describe it', function () {
+    CarbonImmutable::setTestNow('2026-08-11 12:00:00 UTC');
+    Http::preventStrayRequests();
+
+    $user = User::factory()->create();
+    $connection = connectGoogleCalendar($user);
+    $page = BookingPage::factory()->for($user)->create([
+        'title' => 'Meet with Taylor',
+        'timezone' => 'UTC',
+        'minimum_notice_hours' => 0,
+        'buffer_minutes' => 0,
+        'availability_starts_at' => '09:00',
+        'availability_ends_at' => '10:00',
+        'available_days' => [3],
+    ]);
+    BookingCalendarSelection::factory()->for($page)->for($connection, 'connection')->receivesBookings()->create();
+
+    Http::fake(function (Request $request) {
+        if (str_contains($request->url(), '/events')) {
+            return Http::response(['id' => 'lifebooking1', 'htmlLink' => 'https://calendar.google.com/event/1']);
+        }
+
+        return Http::response(['calendars' => ['primary' => ['busy' => []]]]);
+    });
+
+    Livewire::test(PublicBookingPage::class, ['bookingPage' => $page])
+        ->set('selectedDate', '2026-08-12')
+        ->set('selectedStart', '2026-08-12T09:00:00+00:00')
+        ->set('guestName', 'Alex Guest')
+        ->set('guestEmail', 'alex@example.test')
+        ->set('meetingTitle', 'Quarterly roadmap review')
+        ->set('notes', 'I will bring the draft.')
+        ->call('book')
+        ->assertHasNoErrors()
+        ->assertSee('Quarterly roadmap review');
+
+    expect(Booking::sole()->guest_title)->toBe('Quarterly roadmap review');
+
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/events')
+        && $request['summary'] === 'Quarterly roadmap review — Alex Guest'
+        && str_contains($request['description'], 'I will bring the draft.'));
+});
+
+it('falls back to the host title when the guest names no meeting', function () {
+    CarbonImmutable::setTestNow('2026-08-11 12:00:00 UTC');
+    Http::preventStrayRequests();
+
+    $user = User::factory()->create();
+    $connection = connectGoogleCalendar($user);
+    $page = BookingPage::factory()->for($user)->create([
+        'title' => 'Meet with Taylor',
+        'timezone' => 'UTC',
+        'minimum_notice_hours' => 0,
+        'buffer_minutes' => 0,
+        'availability_starts_at' => '09:00',
+        'availability_ends_at' => '10:00',
+        'available_days' => [3],
+    ]);
+    BookingCalendarSelection::factory()->for($page)->for($connection, 'connection')->receivesBookings()->create();
+
+    Http::fake(function (Request $request) {
+        if (str_contains($request->url(), '/events')) {
+            return Http::response(['id' => 'lifebooking1', 'htmlLink' => 'https://calendar.google.com/event/1']);
+        }
+
+        return Http::response(['calendars' => ['primary' => ['busy' => []]]]);
+    });
+
+    Livewire::test(PublicBookingPage::class, ['bookingPage' => $page])
+        ->set('selectedDate', '2026-08-12')
+        ->set('selectedStart', '2026-08-12T09:00:00+00:00')
+        ->set('guestName', 'Alex Guest')
+        ->set('guestEmail', 'alex@example.test')
+        ->call('book')
+        ->assertHasNoErrors();
+
+    expect(Booking::sole()->guest_title)->toBeNull();
+
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/events')
+        && $request['summary'] === 'Meet with Taylor — Alex Guest');
+});

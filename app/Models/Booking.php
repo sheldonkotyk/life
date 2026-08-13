@@ -24,6 +24,7 @@ class Booking extends Model
         'google_calendar_connection_id',
         'guest_name',
         'guest_email',
+        'guest_title',
         'notes',
         'starts_at',
         'ends_at',
@@ -58,6 +59,19 @@ class Booking extends Model
     public function googleCalendarConnection(): BelongsTo
     {
         return $this->belongsTo(GoogleCalendarConnection::class);
+    }
+
+    /**
+     * What the meeting is called: the guest's own words when they gave any,
+     * otherwise the host's page title.
+     */
+    public function summary(): string
+    {
+        $title = filled($this->guest_title)
+            ? $this->guest_title
+            : $this->bookingPage->title;
+
+        return $title.' — '.$this->guest_name;
     }
 
     public function isCancelled(): bool

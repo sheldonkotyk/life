@@ -15,7 +15,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Throwable;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.app', ['chrome' => false])]
 #[Title('Request a meeting — Life')]
 class PublicBookingPage extends Component
 {
@@ -28,6 +28,8 @@ class PublicBookingPage extends Component
     public string $guestName = '';
 
     public string $guestEmail = '';
+
+    public string $meetingTitle = '';
 
     public string $notes = '';
 
@@ -68,6 +70,7 @@ class PublicBookingPage extends Component
             'selectedStart' => ['required', 'date'],
             'guestName' => ['required', 'string', 'max:120'],
             'guestEmail' => ['required', 'email', 'max:255'],
+            'meetingTitle' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'guestTimezone' => ['required', 'timezone'],
         ], [
@@ -96,6 +99,7 @@ class PublicBookingPage extends Component
         try {
             $this->booking = $createBooking->execute($this->bookingPage, $startsAt, [
                 'guest_name' => trim($validated['guestName']),
+                'guest_title' => blank($validated['meetingTitle']) ? null : trim($validated['meetingTitle']),
                 'guest_email' => mb_strtolower(trim($validated['guestEmail'])),
                 'notes' => blank($validated['notes']) ? null : trim($validated['notes']),
                 'guest_timezone' => $validated['guestTimezone'],

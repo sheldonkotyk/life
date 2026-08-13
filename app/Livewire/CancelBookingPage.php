@@ -10,7 +10,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Throwable;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.app', ['chrome' => false])]
 #[Title('Cancel your meeting — Life')]
 class CancelBookingPage extends Component
 {

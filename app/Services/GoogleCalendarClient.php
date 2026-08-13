@@ -121,7 +121,7 @@ class GoogleCalendarClient implements GoogleCalendar
             $connection,
             fn (PendingRequest $request): Response => $request->withQueryParameters(['sendUpdates' => 'all'])->post($url, [
                 'id' => $eventId,
-                'summary' => $bookingPage->title.' — '.$booking->guest_name,
+                'summary' => $booking->summary(),
                 'description' => $this->eventDescription($booking),
                 'start' => [
                     'dateTime' => $booking->starts_at->toRfc3339String(),

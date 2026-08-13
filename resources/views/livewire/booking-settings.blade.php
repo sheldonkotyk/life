@@ -354,6 +354,9 @@
                         <div>
                             <div class="font-medium text-zinc-900 dark:text-white">{{ $upcoming->guest_name }}</div>
                             <div class="text-sm text-zinc-500">{{ $upcoming->guest_email }}</div>
+                            @if ($upcoming->guest_title)
+                                <div class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{{ $upcoming->guest_title }}</div>
+                            @endif
                         </div>
                         <div class="flex items-center gap-4 sm:justify-end">
                             <div class="text-sm text-zinc-600 dark:text-zinc-300 sm:text-right">

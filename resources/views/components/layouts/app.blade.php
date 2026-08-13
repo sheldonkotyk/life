@@ -17,7 +17,9 @@
     @fluxAppearance
 </head>
 <body class="h-full text-zinc-800 dark:text-zinc-200">
+    {{-- Public pages stay bare, so a signed-in visitor sees what a guest sees. --}}
     @auth
+    @if ($chrome ?? true)
         @php
             $here = trim(request()->path(), '/');
             $currentUser = auth()->user();
@@ -157,6 +159,7 @@
                 </flux:menu>
             </flux:dropdown>
         </flux:header>
+    @endif
     @endauth
 
     <flux:main container>

@@ -1,8 +1,4 @@
 <div class="mx-auto max-w-5xl py-6 sm:py-12">
-    <div class="mb-8 flex items-center justify-center gap-2 text-sm font-semibold text-zinc-500">
-        <span class="flex size-7 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">✦</span>
-        Life Bookings
-    </div>
 
     <flux:card class="mx-auto max-w-xl text-center">
         @if ($booking->isCancelled())
@@ -26,7 +22,7 @@
         @endif
 
         <div class="mt-6 rounded-xl bg-zinc-50 p-5 text-left dark:bg-zinc-800">
-            <div class="font-semibold text-zinc-900 dark:text-white">{{ $bookingPage->title }}</div>
+            <div class="font-semibold text-zinc-900 dark:text-white">{{ $booking->guest_title ?: $bookingPage->title }}</div>
             <div class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
                 {{ $booking->starts_at->setTimezone($booking->guest_timezone)->format('l, F j, Y · g:i A') }}
                 · {{ $bookingPage->duration_minutes }} minutes

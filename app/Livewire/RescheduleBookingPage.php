@@ -14,7 +14,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Throwable;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.app', ['chrome' => false])]
 #[Title('Move your meeting — Life')]
 class RescheduleBookingPage extends Component
 {
