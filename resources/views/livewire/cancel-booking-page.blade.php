@@ -1,13 +1,25 @@
 <div class="mx-auto max-w-5xl py-6 sm:py-12">
 
     <flux:card class="mx-auto max-w-xl text-center">
-        @if ($booking->isCancelled())
+        @if ($booking->isRejected())
+            <div class="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                <flux:icon.x-mark class="size-7" />
+            </div>
+            <flux:heading size="xl">This request was declined</flux:heading>
+            <flux:text variant="subtle" class="mt-2">
+                {{ $bookingPage->user->name }} could not take this time. You're welcome to book another.
+            </flux:text>
+        @elseif ($booking->isCancelled())
             <div class="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                 <flux:icon.x-mark class="size-7" />
             </div>
             <flux:heading size="xl">{{ $justCancelled ? 'Your meeting is cancelled' : 'This meeting was already cancelled' }}</flux:heading>
             <flux:text variant="subtle" class="mt-2">
-                The event has been removed from {{ $bookingPage->user->name }}'s calendar.
+                @if ($booking->google_event_id)
+                    The event has been removed from {{ $bookingPage->user->name }}'s calendar.
+                @else
+                    The time is free again.
+                @endif
             </flux:text>
         @elseif ($booking->starts_at->isPast())
             <flux:heading size="xl">This meeting has already happened</flux:heading>
@@ -34,14 +46,14 @@
             <flux:text variant="danger" class="mt-4">{{ $message }}</flux:text>
         @enderror
 
-        @unless ($booking->isCancelled() || $booking->starts_at->isPast())
+        @unless ($booking->isCancelled() || $booking->isRejected() || $booking->starts_at->isPast())
             <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <flux:button wire:click="cancel" variant="danger">Cancel meeting</flux:button>
                 <flux:button :href="route('booking.show', $bookingPage)" variant="ghost">Keep it</flux:button>
             </div>
         @endunless
 
-        @if ($booking->isCancelled())
+        @if ($booking->isCancelled() || $booking->isRejected())
             <flux:button :href="route('booking.show', $bookingPage)" variant="ghost" class="mt-6">
                 Book another time
             </flux:button>

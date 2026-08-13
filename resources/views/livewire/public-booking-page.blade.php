@@ -5,9 +5,20 @@
             <div class="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                 <flux:icon.check class="size-7" />
             </div>
-            <flux:heading size="xl">You're booked</flux:heading>
+            <flux:heading size="xl">
+                @if ($booking->isAwaitingApproval())
+                    Request sent
+                @else
+                    You're booked
+                @endif
+            </flux:heading>
             <flux:text variant="subtle" class="mt-2">
-                A calendar invitation was sent to {{ $booking->guest_email }}.
+                @if ($booking->isAwaitingApproval())
+                    {{ $bookingPage->user->name }} is holding this time for you. You'll get a calendar invitation at
+                    {{ $booking->guest_email }} once they accept.
+                @else
+                    A calendar invitation was sent to {{ $booking->guest_email }}.
+                @endif
             </flux:text>
 
             <div class="mt-6 rounded-xl bg-zinc-50 p-5 text-left dark:bg-zinc-800">

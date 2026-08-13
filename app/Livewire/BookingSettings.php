@@ -3,12 +3,14 @@
 namespace App\Livewire;
 
 use App\Actions\CancelBooking;
+use App\Actions\RespondToBooking;
 use App\Contracts\GoogleCalendar;
 use App\Models\Booking;
 use App\Models\BookingPage;
 use App\Models\GoogleCalendarConnection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -34,6 +36,8 @@ class BookingSettings extends Component
     public string $slug = '';
 
     public bool $isEnabled = false;
+
+    public bool $requiresApproval = false;
 
     public string $title = '';
 
@@ -122,6 +126,7 @@ class BookingSettings extends Component
                 Rule::unique('booking_pages', 'slug')->ignore($this->bookingPage),
             ],
             'isEnabled' => ['boolean'],
+            'requiresApproval' => ['boolean'],
             'title' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:1000'],
             'durationMinutes' => ['required', Rule::in([15, 30, 45, 60, 90])],
@@ -188,6 +193,7 @@ class BookingSettings extends Component
             $this->bookingPage->update([
                 'slug' => $this->slug,
                 'is_enabled' => $this->isEnabled,
+                'requires_approval' => $this->requiresApproval,
                 'title' => $this->title,
                 'description' => blank($this->description) ? null : trim($this->description),
                 'duration_minutes' => $this->durationMinutes,
@@ -262,6 +268,35 @@ class BookingSettings extends Component
             : 'Google account disconnected. Pages that relied on its calendars were unpublished.');
     }
 
+    public function acceptBooking(int $bookingId, RespondToBooking $respondToBooking): void
+    {
+        $booking = $this->bookingPage->bookings()->findOrFail($bookingId);
+
+        try {
+            $respondToBooking->accept($booking);
+        } catch (ValidationException $exception) {
+            $this->addError('bookings', $exception->getMessage());
+
+            return;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $this->addError('bookings', 'The meeting could not be added to Google Calendar. Please try again.');
+
+            return;
+        }
+
+        session()->flash('status', 'Meeting accepted. The guest has been invited.');
+    }
+
+    public function declineBooking(int $bookingId, RespondToBooking $respondToBooking): void
+    {
+        $booking = $this->bookingPage->bookings()->findOrFail($bookingId);
+        $respondToBooking->decline($booking);
+
+        session()->flash('status', 'Request declined. The time is free again.');
+    }
+
     public function cancelBooking(int $bookingId, CancelBooking $cancelBooking): void
     {
         $booking = $this->bookingPage->bookings()->findOrFail($bookingId);
@@ -316,6 +351,13 @@ class BookingSettings extends Component
             'days' => self::DAYS,
             'timezones' => \DateTimeZone::listIdentifiers(),
             'publicUrl' => $this->bookingPage ? route('booking.show', $this->bookingPage) : null,
+            'pendingRequests' => $this->bookingPage
+                ? $this->bookingPage->bookings()
+                    ->where('status', Booking::STATUS_PENDING)
+                    ->where('starts_at', '>=', now())
+                    ->orderBy('starts_at')
+                    ->get()
+                : collect(),
             'upcomingBookings' => $this->bookingPage
                 ? $this->bookingPage->bookings()
                     ->where('status', Booking::STATUS_CONFIRMED)
@@ -355,6 +397,7 @@ class BookingSettings extends Component
         $this->bookingPage->refresh();
         $this->slug = $this->bookingPage->slug;
         $this->isEnabled = $this->bookingPage->is_enabled;
+        $this->requiresApproval = $this->bookingPage->requires_approval;
         $this->title = $this->bookingPage->title;
         $this->description = $this->bookingPage->description ?? '';
         $this->durationMinutes = $this->bookingPage->duration_minutes;

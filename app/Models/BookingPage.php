@@ -19,6 +19,7 @@ class BookingPage extends Model
         'google_calendar_connection_id',
         'slug',
         'is_enabled',
+        'requires_approval',
         'title',
         'description',
         'duration_minutes',
@@ -32,6 +33,7 @@ class BookingPage extends Model
 
     protected $attributes = [
         'is_enabled' => false,
+        'requires_approval' => false,
         'title' => 'Meet with me',
         'duration_minutes' => 30,
         'minimum_notice_hours' => 2,
@@ -45,6 +47,7 @@ class BookingPage extends Model
     {
         return [
             'is_enabled' => 'boolean',
+            'requires_approval' => 'boolean',
             'available_days' => 'array',
             'duration_minutes' => 'integer',
             'minimum_notice_hours' => 'integer',

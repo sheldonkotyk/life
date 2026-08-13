@@ -54,6 +54,12 @@ class CreateBooking
                 'status' => Booking::STATUS_PENDING,
             ]);
 
+            // An approval page writes nothing to the calendar yet: the pending
+            // row holds the slot until its owner answers.
+            if ($bookingPage->requires_approval) {
+                return $booking;
+            }
+
             try {
                 $event = $this->googleCalendar->createEvent(
                     $destination,

@@ -19,9 +19,17 @@
                 <div class="mt-1 text-sm text-zinc-500">{{ $booking->guest_timezone }}</div>
             </div>
         </flux:card>
-    @elseif ($booking->isCancelled())
+    @elseif ($booking->isAwaitingApproval())
         <flux:card class="mx-auto max-w-xl text-center">
-            <flux:heading size="xl">This meeting was cancelled</flux:heading>
+            <flux:heading size="xl">This request hasn't been accepted yet</flux:heading>
+            <flux:text variant="subtle" class="mt-2">
+                {{ $bookingPage->user->name }} is still holding the time. Cancel the request if you need a different one.
+            </flux:text>
+            <flux:button :href="$booking->cancelUrl()" variant="ghost" class="mt-6">Cancel the request</flux:button>
+        </flux:card>
+    @elseif ($booking->isCancelled() || $booking->isRejected())
+        <flux:card class="mx-auto max-w-xl text-center">
+            <flux:heading size="xl">{{ $booking->isRejected() ? 'This request was declined' : 'This meeting was cancelled' }}</flux:heading>
             <flux:text variant="subtle" class="mt-2">
                 It can no longer be moved, but you're welcome to book a new time.
             </flux:text>

@@ -25,6 +25,12 @@ class RescheduleBooking
             ]);
         }
 
+        if ($booking->isAwaitingApproval()) {
+            throw ValidationException::withMessages([
+                'selectedStart' => 'This request has not been accepted yet, so it cannot be moved. Cancel it and book another time instead.',
+            ]);
+        }
+
         $bookingPage = $booking->bookingPage;
         $lockName = 'booking:'.$bookingPage->id.':'.$startsAt->utc()->timestamp;
 

@@ -19,6 +19,8 @@ class Booking extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const STATUS_REJECTED = 'rejected';
+
     protected $fillable = [
         'booking_page_id',
         'google_calendar_connection_id',
@@ -35,6 +37,7 @@ class Booking extends Model
         'google_event_link',
         'cancelled_at',
         'rescheduled_at',
+        'responded_at',
     ];
 
     protected $attributes = [
@@ -48,6 +51,7 @@ class Booking extends Model
             'ends_at' => 'immutable_datetime',
             'cancelled_at' => 'immutable_datetime',
             'rescheduled_at' => 'immutable_datetime',
+            'responded_at' => 'immutable_datetime',
         ];
     }
 
@@ -77,6 +81,19 @@ class Booking extends Model
     public function isCancelled(): bool
     {
         return $this->status === self::STATUS_CANCELLED;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === self::STATUS_REJECTED;
+    }
+
+    /**
+     * Holding a slot while its owner decides, with no calendar event yet.
+     */
+    public function isAwaitingApproval(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
     }
 
     /**

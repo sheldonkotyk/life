@@ -325,7 +325,10 @@
                         <flux:heading size="lg">Publish</flux:heading>
                         <flux:text variant="subtle">Your link is {{ $publicUrl }}</flux:text>
                     </div>
-                    <flux:switch wire:model="isEnabled" label="Accept bookings" />
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+                        <flux:switch wire:model="requiresApproval" label="Approve each request" />
+                        <flux:switch wire:model="isEnabled" label="Accept bookings" />
+                    </div>
                 </div>
 
                 <div class="flex justify-end">
@@ -335,6 +338,48 @@
                 </div>
             </flux:card>
         </form>
+    @endif
+
+    @if ($pendingRequests->isNotEmpty())
+        <flux:card class="space-y-4">
+            <div>
+                <flux:heading size="lg">Requests waiting on you</flux:heading>
+                <flux:text variant="subtle">These times are held. Nothing reaches your calendar until you accept.</flux:text>
+            </div>
+
+            @error('bookings')
+                <flux:callout color="red" icon="exclamation-triangle">{{ $message }}</flux:callout>
+            @enderror
+
+            <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                @foreach ($pendingRequests as $request)
+                    <div wire:key="request-{{ $request->id }}" class="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <div class="font-medium text-zinc-900 dark:text-white">{{ $request->guest_name }}</div>
+                            <div class="text-sm text-zinc-500">{{ $request->guest_email }}</div>
+                            @if ($request->guest_title)
+                                <div class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{{ $request->guest_title }}</div>
+                            @endif
+                            @if ($request->notes)
+                                <div class="mt-1 text-sm text-zinc-500">{{ $request->notes }}</div>
+                            @endif
+                        </div>
+                        <div class="flex items-center gap-3 sm:justify-end">
+                            <div class="text-sm text-zinc-600 dark:text-zinc-300 sm:text-right">
+                                {{ $request->starts_at->setTimezone($bookingPage->timezone)->format('M j, Y · g:i A') }}
+                            </div>
+                            <flux:button wire:click="acceptBooking({{ $request->id }})" size="sm" variant="primary">Accept</flux:button>
+                            <flux:button
+                                wire:click="declineBooking({{ $request->id }})"
+                                wire:confirm="Decline this request from {{ $request->guest_name }}?"
+                                size="sm"
+                                variant="subtle"
+                            >Decline</flux:button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </flux:card>
     @endif
 
     @if ($upcomingBookings->isNotEmpty())

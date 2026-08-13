@@ -116,6 +116,12 @@ class AvailabilityService
      */
     private function withoutOwnEvent(array $busyPeriods, Booking $booking): array
     {
+        // A request still waiting for approval owns no event, so anything busy
+        // at that time belongs to someone else.
+        if (blank($booking->google_event_id)) {
+            return $busyPeriods;
+        }
+
         return array_values(array_filter(
             $busyPeriods,
             fn (array $period): bool => ! $period['start']->eq($booking->starts_at)
