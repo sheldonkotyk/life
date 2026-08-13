@@ -219,6 +219,66 @@ class GoogleCalendarClient implements GoogleCalendar
     }
 
     /**
+     * Events on these calendars within a window, for showing an agenda.
+     *
+     * @param  list<string>  $calendarIds
+     * @return list<array{id: string, calendar_id: string, title: string, starts_at: CarbonImmutable, ends_at: CarbonImmutable, all_day: bool, link: string|null}>
+     */
+    public function eventsBetween(
+        GoogleCalendarConnection $connection,
+        array $calendarIds,
+        CarbonImmutable $startsAt,
+        CarbonImmutable $endsAt,
+        string $timezone,
+    ): array {
+        $events = [];
+
+        foreach ($calendarIds as $calendarId) {
+            $response = $this->send(
+                $connection,
+                fn (PendingRequest $request): Response => $request->get(
+                    self::API_URL.'/calendars/'.rawurlencode($calendarId).'/events',
+                    [
+                        'timeMin' => $startsAt->utc()->toRfc3339String(),
+                        'timeMax' => $endsAt->utc()->toRfc3339String(),
+                        'timeZone' => $timezone,
+                        'singleEvents' => 'true',
+                        'orderBy' => 'startTime',
+                        'maxResults' => 100,
+                    ],
+                ),
+            )->throw();
+
+            foreach ($response->json('items', []) as $event) {
+                if (($event['status'] ?? null) === 'cancelled') {
+                    continue;
+                }
+
+                $start = $event['start']['dateTime'] ?? $event['start']['date'] ?? null;
+                $end = $event['end']['dateTime'] ?? $event['end']['date'] ?? null;
+
+                if (! is_string($start) || ! is_string($end)) {
+                    continue;
+                }
+
+                $allDay = ! isset($event['start']['dateTime']);
+
+                $events[] = [
+                    'id' => (string) ($event['id'] ?? ''),
+                    'calendar_id' => $calendarId,
+                    'title' => (string) ($event['summary'] ?? 'Busy'),
+                    'starts_at' => CarbonImmutable::parse($start, $timezone),
+                    'ends_at' => CarbonImmutable::parse($end, $timezone),
+                    'all_day' => $allDay,
+                    'link' => $event['htmlLink'] ?? null,
+                ];
+            }
+        }
+
+        return $events;
+    }
+
+    /**
      * Events changed since the last poll. Without a token this asks for
      * everything from yesterday onward and returns a token to continue from.
      *

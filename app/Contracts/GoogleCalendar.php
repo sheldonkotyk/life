@@ -53,6 +53,18 @@ interface GoogleCalendar
     ): void;
 
     /**
+     * @param  list<string>  $calendarIds
+     * @return list<array{id: string, calendar_id: string, title: string, starts_at: CarbonImmutable, ends_at: CarbonImmutable, all_day: bool, link: string|null}>
+     */
+    public function eventsBetween(
+        GoogleCalendarConnection $connection,
+        array $calendarIds,
+        CarbonImmutable $startsAt,
+        CarbonImmutable $endsAt,
+        string $timezone,
+    ): array;
+
+    /**
      * @return array{events: list<array<string, mixed>>, sync_token: string|null, expired: bool}
      */
     public function changedEvents(

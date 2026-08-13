@@ -4,6 +4,52 @@
         <flux:text size="sm" variant="subtle">{{ $today->format('l, M j') }}</flux:text>
     </div>
 
+    @if ($agenda['calendars'] > 0)
+        <flux:card class="space-y-4">
+            <div class="flex items-baseline justify-between gap-4">
+                <flux:heading size="lg">Your calendar</flux:heading>
+                <flux:text size="sm" variant="subtle">
+                    {{ $agenda['calendars'] }} {{ Str::plural('calendar', $agenda['calendars']) }}
+                </flux:text>
+            </div>
+
+            @if ($agenda['failed'])
+                <flux:callout color="amber" icon="exclamation-triangle">
+                    One of your Google accounts could not be read, so this may be missing events.
+                </flux:callout>
+            @endif
+
+            @if ($agenda['events'] === [])
+                <flux:text variant="subtle">Nothing on your calendars today.</flux:text>
+            @else
+                <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                    @foreach ($agenda['events'] as $event)
+                        @php
+                            $startsAt = \Carbon\CarbonImmutable::parse($event['starts_at'])->setTimezone($today->timezone);
+                            $endsAt = \Carbon\CarbonImmutable::parse($event['ends_at'])->setTimezone($today->timezone);
+                        @endphp
+                        <div wire:key="event-{{ $event['calendar_id'] }}-{{ $event['id'] }}" class="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:gap-4">
+                            <div class="w-36 shrink-0 text-sm font-medium whitespace-nowrap text-zinc-500 sm:w-44">
+                                @if ($event['all_day'])
+                                    All day
+                                @else
+                                    {{ $startsAt->format('g:i A') }} – {{ $endsAt->format('g:i A') }}
+                                @endif
+                            </div>
+                            <div class="min-w-0">
+                                <div class="truncate font-medium text-zinc-900 dark:text-white">{{ $event['title'] }}</div>
+                                {{-- A primary calendar is named after its account; saying it twice reads as a bug. --}}
+                                <div class="truncate text-xs text-zinc-500">
+                                    {{ $event['calendar_name'] === $event['account'] ? $event['account'] : $event['calendar_name'].' · '.$event['account'] }}
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </flux:card>
+    @endif
+
     @if ($meals->isEmpty())
         <flux:card>
             <flux:heading size="lg">Nothing planned today</flux:heading>

@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\FamilyMember;
 use App\Models\MealPlan;
 use App\Models\TodoItem;
+use App\Services\DayAgenda;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -167,6 +168,8 @@ class Today extends Component
 
         $todos = $todoQuery->get();
 
+        $agenda = app(DayAgenda::class)->forUser($user, $today, $tz);
+
         return view('livewire.today', compact(
             'meals',
             'members',
@@ -175,6 +178,7 @@ class Today extends Component
             'leftovers',
             'today',
             'todos',
+            'agenda',
         ));
     }
 }
