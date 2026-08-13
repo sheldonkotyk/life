@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\BookingPage;
+use App\Models\GoogleCalendarConnection;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,6 +17,24 @@ class BookingPageFactory extends Factory
      *
      * @return array<string, mixed>
      */
+    /**
+     * A page belongs to the Google account it books into, so fall back to the
+     * owner's first connected account rather than leaving it orphaned.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (BookingPage $bookingPage): void {
+            if ($bookingPage->google_calendar_connection_id) {
+                return;
+            }
+
+            $connection = GoogleCalendarConnection::firstWhere('user_id', $bookingPage->user_id)
+                ?? GoogleCalendarConnection::factory()->create(['user_id' => $bookingPage->user_id]);
+
+            $bookingPage->forceFill(['google_calendar_connection_id' => $connection->id])->save();
+        });
+    }
+
     public function definition(): array
     {
         return [

@@ -16,6 +16,7 @@ class BookingPage extends Model
 
     protected $fillable = [
         'user_id',
+        'google_calendar_connection_id',
         'slug',
         'is_enabled',
         'title',
@@ -76,16 +77,28 @@ class BookingPage extends Model
         return $this->calendarSelections()->where('receives_bookings', true);
     }
 
+    public function googleCalendarConnection(): BelongsTo
+    {
+        return $this->belongsTo(GoogleCalendarConnection::class);
+    }
+
     public function isReady(): bool
     {
         return $this->is_enabled
+            && $this->google_calendar_connection_id !== null
             && $this->bookingCalendarSelections()->exists()
             && $this->availabilityCalendarSelections()->exists();
     }
 
-    public static function uniqueSlugFor(User $user): string
+    /**
+     * An email address is a valid slug, so a connected account can hand its own
+     * address straight to the public link.
+     */
+    public static function uniqueSlugFor(string $preferred): string
     {
-        $base = Str::slug($user->name) ?: 'meet';
+        $base = str_contains($preferred, '@')
+            ? mb_strtolower(trim($preferred))
+            : (Str::slug($preferred) ?: 'meet');
         $slug = $base;
         $suffix = 2;
 

@@ -5,7 +5,7 @@
             <flux:text variant="subtle">Combine availability across Google accounts and let people book time with you.</flux:text>
         </div>
 
-        @if ($bookingPage->is_enabled)
+        @if ($bookingPage?->is_enabled)
             <flux:button :href="$publicUrl" target="_blank" icon="arrow-top-right-on-square">
                 View booking page
             </flux:button>
@@ -93,6 +93,14 @@
                                 </flux:menu>
                             </flux:dropdown>
                         </div>
+
+                        @if ($bookingPage?->google_calendar_connection_id === $account->id)
+                            <flux:badge color="blue" size="sm">Editing this page below</flux:badge>
+                        @else
+                            <flux:button wire:click="editAccount({{ $account->id }})" size="sm" variant="subtle">
+                                Edit this account's page
+                            </flux:button>
+                        @endif
 
                         @if (isset($accountErrors[$account->id]))
                             <flux:callout color="red" icon="exclamation-triangle">{{ $accountErrors[$account->id] }}</flux:callout>
@@ -200,7 +208,7 @@
         <flux:callout color="red" icon="exclamation-triangle">{{ $message }}</flux:callout>
     @enderror
 
-    @if ($connections->isNotEmpty() && $calendars !== [])
+    @if ($bookingPage && $calendars !== [])
         <form wire:submit="save" class="space-y-6">
             <flux:card class="space-y-6">
                 <div>
@@ -285,7 +293,8 @@
                 <flux:select wire:model="bookingCalendarKey" label="Calendar where new meetings are created" variant="listbox">
                     <flux:select.option value="">Choose a calendar</flux:select.option>
                     @foreach ($calendars as $calendar)
-                        @if (in_array($calendar['access_role'], ['owner', 'writer'], true))
+                        @if ($calendar['connection_id'] === $bookingPage->google_calendar_connection_id
+                            && in_array($calendar['access_role'], ['owner', 'writer'], true))
                             <flux:select.option wire:key="booking-calendar-{{ $calendar['key'] }}" value="{{ $calendar['key'] }}">
                                 {{ $calendar['name'] }} — {{ $calendar['connection_email'] }}
                             </flux:select.option>

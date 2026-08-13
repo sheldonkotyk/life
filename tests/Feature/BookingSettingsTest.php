@@ -15,18 +15,70 @@ it('requires authentication to manage booking settings', function () {
     $this->get(route('booking.settings'))->assertRedirect(route('login'));
 });
 
-it('creates one private booking page per user', function () {
+it('has no booking page until a Google account is connected', function () {
     $user = loginUser();
 
     Livewire::test(BookingSettings::class)
-        ->assertSet('isEnabled', false)
+        ->assertSet('bookingPage', null)
         ->assertSee('Connect Google Calendar');
 
-    $page = BookingPage::whereBelongsTo($user)->sole();
+    expect(BookingPage::whereBelongsTo($user)->exists())->toBeFalse();
+});
 
-    expect($page->slug)->toBe('test-user')
-        ->and($page->timezone)->toBe('UTC')
-        ->and($page->available_days)->toBe([1, 2, 3, 4, 5]);
+it('gives each connected Google account its own page, slugged by its address', function () {
+    Http::preventStrayRequests();
+    $user = loginUser();
+    $work = connectGoogleCalendar($user, 'work@example.test', 'work-token');
+    $personal = connectGoogleCalendar($user, 'personal@example.test', 'personal-token');
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/users/me/calendarList*' => Http::response([
+            'items' => [[
+                'id' => 'primary',
+                'summary' => 'Primary',
+                'primary' => true,
+                'accessRole' => 'owner',
+            ]],
+        ]),
+    ]);
+
+    // Accounts are listed alphabetically, so the first one opens for editing.
+    $component = Livewire::test(BookingSettings::class);
+    expect($component->get('bookingPage')->google_calendar_connection_id)->toBe($personal->id)
+        ->and($component->get('bookingPage')->slug)->toBe('personal@example.test');
+
+    $component->call('editAccount', $work->id);
+
+    expect($component->get('bookingPage')->google_calendar_connection_id)->toBe($work->id)
+        ->and($component->get('bookingPage')->slug)->toBe('work@example.test')
+        ->and(BookingPage::whereBelongsTo($user)->count())->toBe(2);
+});
+
+it('will not book into a calendar belonging to another account', function () {
+    Http::preventStrayRequests();
+    $user = loginUser();
+    $work = connectGoogleCalendar($user, 'work@example.test', 'work-token');
+    $personal = connectGoogleCalendar($user, 'personal@example.test', 'personal-token');
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/users/me/calendarList*' => Http::response([
+            'items' => [[
+                'id' => 'primary',
+                'summary' => 'Primary',
+                'primary' => true,
+                'accessRole' => 'owner',
+            ]],
+        ]),
+    ]);
+
+    // Editing the personal page, but pointing bookings at the work calendar.
+    Livewire::test(BookingSettings::class)
+        ->set('bookingCalendarKey', hash('sha256', $work->id.'|primary'))
+        ->set('availabilityCalendarKeys', [hash('sha256', $personal->id.'|primary')])
+        ->call('save')
+        ->assertHasErrors('bookingCalendarKey');
+
+    expect(BookingCalendarSelection::count())->toBe(0);
 });
 
 it('saves distinct calendar choices from multiple Google accounts', function () {
@@ -182,7 +234,10 @@ it('disconnects only the selected Google account and keeps a ready page publishe
     $user = loginUser();
     $work = connectGoogleCalendar($user, 'work@example.test', 'work-token');
     $personal = connectGoogleCalendar($user, 'personal@example.test', 'personal-token');
-    $page = BookingPage::factory()->for($user)->create();
+    // The page books into the personal account while watching work for conflicts.
+    $page = BookingPage::factory()->for($user)->create([
+        'google_calendar_connection_id' => $personal->id,
+    ]);
     BookingCalendarSelection::factory()->for($page)->for($work, 'connection')->create([
         'google_calendar_name' => 'Work',
     ]);
@@ -214,7 +269,33 @@ it('disconnects only the selected Google account and keeps a ready page publishe
         ->and($otherPage->fresh()->is_enabled)->toBeTrue();
 });
 
-it('unpublishes a booking page when its last Google account is disconnected', function () {
+it('removes the disconnected account\'s own booking page', function () {
+    Http::preventStrayRequests();
+    $user = loginUser();
+    $work = connectGoogleCalendar($user, 'work@example.test', 'work-token');
+    $personal = connectGoogleCalendar($user, 'personal@example.test', 'personal-token');
+    $workPage = BookingPage::factory()->for($user)->create([
+        'google_calendar_connection_id' => $work->id,
+        'slug' => 'work@example.test',
+    ]);
+    $personalPage = BookingPage::factory()->for($user)->create([
+        'google_calendar_connection_id' => $personal->id,
+        'slug' => 'personal@example.test',
+    ]);
+    BookingCalendarSelection::factory()->for($personalPage)->for($personal, 'connection')->receivesBookings()->create();
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/users/me/calendarList*' => Http::response(['items' => []]),
+        'oauth2.googleapis.com/revoke' => Http::response(),
+    ]);
+
+    Livewire::test(BookingSettings::class)->call('disconnect', $work->id);
+
+    expect($workPage->fresh())->toBeNull()
+        ->and($personalPage->fresh())->not->toBeNull();
+});
+
+it('removes the booking page when its last Google account is disconnected', function () {
     Http::preventStrayRequests();
     $user = loginUser();
     $connection = connectGoogleCalendar($user);
@@ -235,7 +316,7 @@ it('unpublishes a booking page when its last Google account is disconnected', fu
 
     Livewire::test(BookingSettings::class)->call('disconnect', $connection->id);
 
-    expect($page->fresh()->is_enabled)->toBeFalse()
+    expect($page->fresh())->toBeNull()
         ->and(BookingCalendarSelection::count())->toBe(0)
         ->and(GoogleCalendarToken::count())->toBe(0);
 });
@@ -269,4 +350,64 @@ it('removes vaulted credentials when their Life user is deleted', function () {
 
     expect(GoogleCalendarConnection::count())->toBe(0)
         ->and(GoogleCalendarToken::count())->toBe(0);
+});
+
+it('accepts an email address as the public link', function () {
+    Http::preventStrayRequests();
+    $user = loginUser();
+    $connection = connectGoogleCalendar($user, 'sheldon@kotyk.com', 'token');
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/users/me/calendarList*' => Http::response([
+            'items' => [[
+                'id' => 'primary',
+                'summary' => 'Primary',
+                'primary' => true,
+                'accessRole' => 'owner',
+            ]],
+        ]),
+    ]);
+
+    $key = hash('sha256', $connection->id.'|primary');
+
+    Livewire::test(BookingSettings::class)
+        ->set('slug', 'Sheldon@Kotyk.com')
+        ->set('bookingCalendarKey', $key)
+        ->set('availabilityCalendarKeys', [$key])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $page = BookingPage::whereBelongsTo($user)->sole();
+
+    // Stored lowercase, and reachable without escaping the address.
+    expect($page->slug)->toBe('sheldon@kotyk.com')
+        ->and(route('booking.show', $page))->toEndWith('/meet/sheldon@kotyk.com');
+
+    $this->get(route('booking.show', $page))->assertNotFound();
+});
+
+it('rejects a public link with characters a URL cannot carry', function () {
+    Http::preventStrayRequests();
+    $user = loginUser();
+    $connection = connectGoogleCalendar($user);
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/users/me/calendarList*' => Http::response([
+            'items' => [[
+                'id' => 'primary',
+                'summary' => 'Primary',
+                'primary' => true,
+                'accessRole' => 'owner',
+            ]],
+        ]),
+    ]);
+
+    $key = hash('sha256', $connection->id.'|primary');
+
+    Livewire::test(BookingSettings::class)
+        ->set('slug', 'book/me now')
+        ->set('bookingCalendarKey', $key)
+        ->set('availabilityCalendarKeys', [$key])
+        ->call('save')
+        ->assertHasErrors('slug');
 });

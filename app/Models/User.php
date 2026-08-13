@@ -127,9 +127,9 @@ class User extends Authenticatable
         return $this->hasMany(GoogleCalendarConnection::class);
     }
 
-    public function bookingPage(): HasOne
+    public function bookingPages(): HasMany
     {
-        return $this->hasOne(BookingPage::class);
+        return $this->hasMany(BookingPage::class);
     }
 
     public function isAdminOf(Household $household): bool

@@ -84,10 +84,13 @@ class GoogleCalendarController extends Controller
         $token->setCredentials($googleUser->token, $refreshToken, $scopes);
         $token->save();
 
+        // Every connected account gets its own page, so the calendars it checks
+        // and the calendar it books into belong to the same Google account.
         BookingPage::firstOrCreate(
-            ['user_id' => $user->id],
+            ['google_calendar_connection_id' => $connection->id],
             [
-                'slug' => BookingPage::uniqueSlugFor($user),
+                'user_id' => $user->id,
+                'slug' => BookingPage::uniqueSlugFor($connection->google_email),
                 'title' => 'Meet with '.$user->name,
                 'timezone' => $user->getTimezone(),
                 'available_days' => [1, 2, 3, 4, 5],

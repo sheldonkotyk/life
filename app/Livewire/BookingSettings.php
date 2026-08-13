@@ -29,7 +29,7 @@ class BookingSettings extends Component
         7 => 'Sunday',
     ];
 
-    public BookingPage $bookingPage;
+    public ?BookingPage $bookingPage = null;
 
     public string $slug = '';
 
@@ -67,22 +67,24 @@ class BookingSettings extends Component
 
     public function mount(GoogleCalendar $googleCalendar): void
     {
-        $user = auth()->user();
-        $this->bookingPage = BookingPage::firstOrCreate(
-            ['user_id' => $user->id],
-            [
-                'slug' => BookingPage::uniqueSlugFor($user),
-                'title' => 'Meet with '.$user->name,
-                'timezone' => $user->getTimezone(),
-                'available_days' => [1, 2, 3, 4, 5],
-            ],
-        );
+        $connection = auth()->user()->googleCalendarConnections()->orderBy('google_email')->first();
 
-        $this->loadSettings();
-
-        if ($user->googleCalendarConnections()->exists()) {
-            $this->loadCalendars($googleCalendar);
+        if (! $connection) {
+            return;
         }
+
+        $this->selectPage($this->pageFor($connection), $googleCalendar);
+    }
+
+    /**
+     * Switch which connected account's page is being edited.
+     */
+    public function editAccount(int $connectionId, GoogleCalendar $googleCalendar): void
+    {
+        $connection = auth()->user()->googleCalendarConnections()->findOrFail($connectionId);
+
+        $this->resetErrorBag();
+        $this->selectPage($this->pageFor($connection), $googleCalendar);
     }
 
     public function refreshCalendars(GoogleCalendar $googleCalendar): void
@@ -92,6 +94,12 @@ class BookingSettings extends Component
 
     public function save(GoogleCalendar $googleCalendar): void
     {
+        if (! $this->bookingPage) {
+            $this->addError('isEnabled', 'Connect Google Calendar before publishing your page.');
+
+            return;
+        }
+
         $this->availableDays = array_values(array_map('intval', $this->availableDays));
         $submittedBookingCalendarKey = $this->bookingCalendarKey;
         $submittedAvailabilityCalendarKeys = $this->availabilityCalendarKeys;
@@ -99,12 +107,18 @@ class BookingSettings extends Component
         $this->bookingCalendarKey = $submittedBookingCalendarKey;
         $this->availabilityCalendarKeys = $submittedAvailabilityCalendarKeys;
 
+        // Links are case-insensitive, and an email typed with capitals is still
+        // the same address.
+        $this->slug = mb_strtolower(trim($this->slug));
+
         $this->validate([
             'slug' => [
                 'required',
                 'string',
-                'alpha_dash',
                 'max:80',
+                // A handle or an email address; both sit in one path segment.
+                'regex:/^[a-z0-9._+-]+(@[a-z0-9-]+(\.[a-z0-9-]+)+)?$/',
+                'not_regex:/^\.|\.$/',
                 Rule::unique('booking_pages', 'slug')->ignore($this->bookingPage),
             ],
             'isEnabled' => ['boolean'],
@@ -121,6 +135,10 @@ class BookingSettings extends Component
             'bookingCalendarKey' => ['required', 'string'],
             'availabilityCalendarKeys' => ['required', 'array', 'min:1', 'max:50'],
             'availabilityCalendarKeys.*' => ['required', 'string'],
+        ], [
+            'slug.regex' => 'Use letters, numbers, dots, dashes, or an email address.',
+            'slug.not_regex' => 'Your link cannot start or end with a dot.',
+            'slug.unique' => 'That link is already taken.',
         ]);
 
         if ($this->accountErrors !== []) {
@@ -136,6 +154,14 @@ class BookingSettings extends Component
             || ! in_array($bookingCalendar['access_role'], ['owner', 'writer'], true)
         ) {
             $this->addError('bookingCalendarKey', 'Choose a calendar that Google allows you to edit.');
+
+            return;
+        }
+
+        // Conflicts may be read from any connected account, but the meeting is
+        // written to the account this page belongs to.
+        if ($bookingCalendar['connection_id'] !== $this->bookingPage->google_calendar_connection_id) {
+            $this->addError('bookingCalendarKey', 'This page books into its own Google account. Choose one of its calendars.');
 
             return;
         }
@@ -202,16 +228,38 @@ class BookingSettings extends Component
             report($exception);
         }
 
-        $connection->delete();
-        $this->bookingPage->unsetRelations();
+        $editingDisconnectedAccount = $this->bookingPage?->google_calendar_connection_id === $connection->id;
 
-        if ($this->bookingPage->is_enabled && ! $this->bookingPage->isReady()) {
-            $this->bookingPage->update(['is_enabled' => false]);
+        // The account's own page goes with it; other pages may have been reading
+        // its calendars for conflicts, so they are unpublished if that leaves
+        // them unable to answer honestly.
+        $connection->delete();
+
+        $remaining = auth()->user()->googleCalendarConnections()->orderBy('google_email')->first();
+
+        if (! $remaining) {
+            $this->bookingPage = null;
+            $this->calendars = [];
+            $this->accountErrors = [];
+            session()->flash('status', 'Google account disconnected. Its booking page was removed.');
+
+            return;
         }
 
-        $this->loadSettings();
-        $this->loadCalendars($googleCalendar);
-        session()->flash('status', 'Google account disconnected. Remaining calendar selections were kept.');
+        foreach (auth()->user()->bookingPages()->where('is_enabled', true)->get() as $page) {
+            if (! $page->isReady()) {
+                $page->update(['is_enabled' => false]);
+            }
+        }
+
+        $this->selectPage(
+            $editingDisconnectedAccount ? $this->pageFor($remaining) : $this->bookingPage->fresh(),
+            $googleCalendar,
+        );
+
+        session()->flash('status', $editingDisconnectedAccount
+            ? 'Google account disconnected. Its booking page was removed.'
+            : 'Google account disconnected. Pages that relied on its calendars were unpublished.');
     }
 
     public function cancelBooking(int $bookingId, CancelBooking $cancelBooking): void
@@ -237,9 +285,9 @@ class BookingSettings extends Component
             ->with('oauthToken')
             ->orderBy('google_email')
             ->get();
-        $selections = $this->bookingPage->calendarSelections()
-            ->with('connection:id,google_email')
-            ->get();
+        $selections = $this->bookingPage
+            ? $this->bookingPage->calendarSelections()->with('connection:id,google_email')->get()
+            : collect();
 
         $accountSummaries = $connections->map(function (GoogleCalendarConnection $connection) use ($selections): array {
             $token = $connection->oauthToken;
@@ -263,14 +311,39 @@ class BookingSettings extends Component
             'accountSummaries' => $accountSummaries,
             'days' => self::DAYS,
             'timezones' => \DateTimeZone::listIdentifiers(),
-            'publicUrl' => route('booking.show', $this->bookingPage),
-            'upcomingBookings' => $this->bookingPage->bookings()
-                ->where('status', Booking::STATUS_CONFIRMED)
-                ->where('starts_at', '>=', now())
-                ->orderBy('starts_at')
-                ->limit(10)
-                ->get(),
+            'publicUrl' => $this->bookingPage ? route('booking.show', $this->bookingPage) : null,
+            'upcomingBookings' => $this->bookingPage
+                ? $this->bookingPage->bookings()
+                    ->where('status', Booking::STATUS_CONFIRMED)
+                    ->where('starts_at', '>=', now())
+                    ->orderBy('starts_at')
+                    ->limit(10)
+                    ->get()
+                : collect(),
         ]);
+    }
+
+    private function pageFor(GoogleCalendarConnection $connection): BookingPage
+    {
+        $user = auth()->user();
+
+        return BookingPage::firstOrCreate(
+            ['google_calendar_connection_id' => $connection->id],
+            [
+                'user_id' => $user->id,
+                'slug' => BookingPage::uniqueSlugFor($connection->google_email),
+                'title' => 'Meet with '.$user->name,
+                'timezone' => $user->getTimezone(),
+                'available_days' => [1, 2, 3, 4, 5],
+            ],
+        );
+    }
+
+    private function selectPage(BookingPage $bookingPage, GoogleCalendar $googleCalendar): void
+    {
+        $this->bookingPage = $bookingPage;
+        $this->loadSettings();
+        $this->loadCalendars($googleCalendar);
     }
 
     private function loadSettings(): void
@@ -311,14 +384,20 @@ class BookingSettings extends Component
             : '';
 
         if ($selections->isEmpty()) {
-            $primaryCalendars = collect($this->calendars)->where('primary', true);
-            $writablePrimary = $primaryCalendars
-                ->first(fn (array $calendar): bool => in_array($calendar['access_role'], ['owner', 'writer'], true));
-            $writableCalendar = collect($this->calendars)
-                ->first(fn (array $calendar): bool => in_array($calendar['access_role'], ['owner', 'writer'], true));
+            // A fresh page starts on its own account: every primary calendar the
+            // user has checks conflicts, and this account's primary receives.
+            $ownCalendars = collect($this->calendars)
+                ->where('connection_id', $this->bookingPage->google_calendar_connection_id);
+            $writable = fn (array $calendar): bool => in_array($calendar['access_role'], ['owner', 'writer'], true);
 
-            $this->availabilityCalendarKeys = $primaryCalendars->pluck('key')->values()->all();
-            $this->bookingCalendarKey = $writablePrimary['key'] ?? $writableCalendar['key'] ?? '';
+            $this->availabilityCalendarKeys = collect($this->calendars)
+                ->where('primary', true)
+                ->pluck('key')
+                ->values()
+                ->all();
+            $this->bookingCalendarKey = $ownCalendars->where('primary', true)->first($writable)['key']
+                ?? $ownCalendars->first($writable)['key']
+                ?? '';
         }
     }
 
