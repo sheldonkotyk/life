@@ -23,7 +23,20 @@ class GoogleCalendarConnectionFactory extends Factory
             'user_id' => User::factory(),
             'google_user_id' => fake()->uuid(),
             'google_email' => fake()->safeEmail(),
+            'google_name' => fake()->name(),
+            'google_avatar_url' => 'https://lh3.googleusercontent.com/a/'.fake()->uuid(),
         ];
+    }
+
+    /**
+     * An account connected before Life stored Google profile details.
+     */
+    public function withoutProfile(): static
+    {
+        return $this->state([
+            'google_name' => null,
+            'google_avatar_url' => null,
+        ]);
     }
 
     public function withToken(): static

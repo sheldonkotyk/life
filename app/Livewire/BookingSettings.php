@@ -94,6 +94,7 @@ class BookingSettings extends Component
     public function refreshCalendars(GoogleCalendar $googleCalendar): void
     {
         $this->loadCalendars($googleCalendar);
+        $this->syncProfiles($googleCalendar, force: true);
     }
 
     public function save(GoogleCalendar $googleCalendar): void
@@ -471,6 +472,40 @@ class BookingSettings extends Component
                 report($exception);
                 $this->accountErrors[$connection->id] = 'Calendars could not be loaded. Reconnect this account and try again.';
             }
+        }
+
+        $this->syncProfiles($googleCalendar);
+    }
+
+    /**
+     * Fill in the Google name and picture for accounts connected before we
+     * started storing them. A missing picture is cosmetic, so failures are
+     * reported and forgotten rather than shown.
+     */
+    private function syncProfiles(GoogleCalendar $googleCalendar, bool $force = false): void
+    {
+        $connections = auth()->user()->googleCalendarConnections()
+            ->with('oauthToken')
+            ->when(! $force, fn ($query) => $query->whereNull('google_avatar_url'))
+            ->get();
+
+        foreach ($connections as $connection) {
+            if (isset($this->accountErrors[$connection->id])) {
+                continue;
+            }
+
+            try {
+                $profile = $googleCalendar->profile($connection);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                continue;
+            }
+
+            $connection->update(array_filter([
+                'google_name' => $profile['name'],
+                'google_avatar_url' => $profile['avatar_url'],
+            ], fn (?string $value): bool => filled($value)));
         }
     }
 

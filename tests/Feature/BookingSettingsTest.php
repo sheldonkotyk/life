@@ -54,6 +54,59 @@ it('gives each connected Google account its own page, slugged by its address', f
         ->and(BookingPage::whereBelongsTo($user)->count())->toBe(2);
 });
 
+it('shows each account as a selectable card with its Google picture', function () {
+    Http::preventStrayRequests();
+    $user = loginUser();
+    $personal = connectGoogleCalendar($user, 'personal@example.test', 'personal-token');
+    $work = connectGoogleCalendar($user, 'work@example.test', 'work-token');
+    $work->update(['google_avatar_url' => 'https://lh3.googleusercontent.com/a/work-photo']);
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/users/me/calendarList*' => Http::response([
+            'items' => [[
+                'id' => 'primary',
+                'summary' => 'Primary',
+                'primary' => true,
+                'accessRole' => 'owner',
+            ]],
+        ]),
+    ]);
+
+    Livewire::test(BookingSettings::class)
+        ->assertSee('https://lh3.googleusercontent.com/a/work-photo', escape: false)
+        ->assertDontSee("Edit this account's page")
+        ->assertSeeHtml('wire:click="editAccount('.$work->id.')"')
+        ->assertSeeHtml('wire:click="editAccount('.$personal->id.')"');
+});
+
+it('backfills the Google picture for accounts connected before we stored one', function () {
+    Http::preventStrayRequests();
+    $user = loginUser();
+    $connection = connectGoogleCalendar($user, 'calendar@example.test', 'access-token');
+    $connection->forceFill(['google_name' => null, 'google_avatar_url' => null])->save();
+
+    Http::fake([
+        'www.googleapis.com/calendar/v3/users/me/calendarList*' => Http::response([
+            'items' => [[
+                'id' => 'primary',
+                'summary' => 'Primary',
+                'primary' => true,
+                'accessRole' => 'owner',
+            ]],
+        ]),
+        'www.googleapis.com/oauth2/v3/userinfo' => Http::response([
+            'name' => 'Calendar Owner',
+            'picture' => 'https://lh3.googleusercontent.com/a/backfilled',
+        ]),
+    ]);
+
+    Livewire::test(BookingSettings::class)
+        ->assertSee('https://lh3.googleusercontent.com/a/backfilled', escape: false);
+
+    expect($connection->fresh()->google_name)->toBe('Calendar Owner')
+        ->and($connection->fresh()->google_avatar_url)->toBe('https://lh3.googleusercontent.com/a/backfilled');
+});
+
 it('will not book into a calendar belonging to another account', function () {
     Http::preventStrayRequests();
     $user = loginUser();

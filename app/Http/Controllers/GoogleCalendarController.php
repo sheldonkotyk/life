@@ -65,6 +65,11 @@ class GoogleCalendarController extends Controller
             ],
             [
                 'google_email' => $googleUser->getEmail() ?: $user->email,
+                // Google occasionally omits profile details; keep what we have.
+                ...array_filter([
+                    'google_name' => $googleUser->getName(),
+                    'google_avatar_url' => $googleUser->getAvatar(),
+                ], fn (?string $value): bool => filled($value)),
             ],
         );
 

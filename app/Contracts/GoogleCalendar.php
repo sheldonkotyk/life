@@ -16,6 +16,13 @@ interface GoogleCalendar
     public function calendars(GoogleCalendarConnection $connection): array;
 
     /**
+     * The Google profile behind the connection: its display name and picture.
+     *
+     * @return array{name: string|null, avatar_url: string|null}
+     */
+    public function profile(GoogleCalendarConnection $connection): array;
+
+    /**
      * @param  list<string>  $calendarIds
      * @return list<array{start: CarbonImmutable, end: CarbonImmutable}>
      */

@@ -60,6 +60,42 @@ it('stores Google credentials in Token Vault after the callback', function () {
         ->and(BookingPage::whereBelongsTo($user)->exists())->toBeTrue();
 });
 
+it('keeps the Google profile picture so accounts are recognisable', function () {
+    $user = loginUser();
+    Socialite::fake('google', SocialiteUser::fake([
+        'id' => 'google-user-123',
+        'name' => 'Calendar Owner',
+        'email' => 'calendar-owner@example.test',
+        'avatar' => 'https://lh3.googleusercontent.com/a/photo',
+        'token' => 'access-token',
+        'refreshToken' => 'refresh-token',
+        'expiresIn' => 3600,
+    ]));
+
+    $this->get(route('google-calendar.callback'))->assertRedirect(route('booking.settings'));
+
+    $connection = $user->googleCalendarConnections()->sole();
+
+    expect($connection->google_name)->toBe('Calendar Owner')
+        ->and($connection->google_avatar_url)->toBe('https://lh3.googleusercontent.com/a/photo');
+
+    // Reconnecting without profile details must not wipe the picture we have.
+    Socialite::fake('google', SocialiteUser::fake([
+        'id' => 'google-user-123',
+        'name' => null,
+        'email' => 'calendar-owner@example.test',
+        'avatar' => null,
+        'token' => 'newer-access-token',
+        'refreshToken' => 'refresh-token',
+        'expiresIn' => 3600,
+    ]));
+
+    $this->get(route('google-calendar.callback'))->assertRedirect(route('booking.settings'));
+
+    expect($connection->fresh()->google_avatar_url)->toBe('https://lh3.googleusercontent.com/a/photo')
+        ->and($connection->fresh()->google_name)->toBe('Calendar Owner');
+});
+
 it('allows one Life user to connect multiple Google accounts', function () {
     $user = loginUser();
 

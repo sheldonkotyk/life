@@ -50,20 +50,35 @@
                 </div>
             </flux:card>
         @else
-            <div class="grid gap-4 lg:grid-cols-2">
+            <div class="grid gap-4 lg:grid-cols-2" role="tablist">
                 @foreach ($accountSummaries as $summary)
                     @php
                         $account = $summary['connection'];
                         $token = $summary['token'];
                         $accountPage = $summary['page'];
+                        $isEditing = $bookingPage?->google_calendar_connection_id === $account->id;
                     @endphp
                     <div wire:key="google-account-{{ $account->id }}">
-                    <flux:card class="space-y-4">
+                    <flux:card
+                        class="space-y-4 cursor-pointer transition {{ $isEditing
+                            ? 'ring-2 ring-blue-500 dark:ring-blue-400'
+                            : 'hover:ring-2 hover:ring-zinc-300 dark:hover:ring-zinc-600' }}"
+                        wire:click="editAccount({{ $account->id }})"
+                        wire:keydown.enter="editAccount({{ $account->id }})"
+                        role="tab"
+                        tabindex="0"
+                        aria-selected="{{ $isEditing ? 'true' : 'false' }}"
+                    >
                         <div class="flex items-start justify-between gap-4">
                             <div class="flex min-w-0 items-center gap-3">
-                                <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                                    G
-                                </div>
+                                <flux:avatar
+                                    circle
+                                    color="auto"
+                                    color:seed="{{ $account->google_email }}"
+                                    :src="$account->google_avatar_url"
+                                    :name="$account->google_name ?: $account->google_email"
+                                    class="shrink-0"
+                                />
                                 <div class="min-w-0">
                                     <div class="truncate font-medium text-zinc-900 dark:text-white">{{ $account->google_email }}</div>
                                     <div class="mt-1 flex flex-wrap items-center gap-2">
@@ -79,7 +94,7 @@
                                 </div>
                             </div>
 
-                            <flux:dropdown position="bottom" align="end">
+                            <flux:dropdown position="bottom" align="end" @click.stop>
                                 <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" square />
                                 <flux:menu>
                                     <flux:modal.trigger name="google-account-details-{{ $account->id }}">
@@ -96,12 +111,8 @@
                             </flux:dropdown>
                         </div>
 
-                        @if ($bookingPage?->google_calendar_connection_id === $account->id)
-                            <flux:badge color="blue" size="sm">Editing this page below</flux:badge>
-                        @else
-                            <flux:button wire:click="editAccount({{ $account->id }})" size="sm" variant="subtle">
-                                Edit this account's page
-                            </flux:button>
+                        @if ($isEditing)
+                            <flux:badge color="blue" size="sm" icon="pencil-square">Editing this page below</flux:badge>
                         @endif
 
                         @if (isset($accountErrors[$account->id]))

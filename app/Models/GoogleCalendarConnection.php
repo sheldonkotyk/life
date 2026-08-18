@@ -19,6 +19,8 @@ class GoogleCalendarConnection extends Model
         'user_id',
         'google_user_id',
         'google_email',
+        'google_name',
+        'google_avatar_url',
     ];
 
     public function user(): BelongsTo
