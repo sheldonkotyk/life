@@ -6,6 +6,7 @@ use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\GoogleCalendarWebhookController;
 use App\Http\Controllers\TimezoneController;
 use App\Livewire\BookingSettings;
+use App\Livewire\Calendar;
 use App\Livewire\CancelBookingPage;
 use App\Livewire\HouseholdSettings;
 use App\Livewire\Lists;
@@ -69,6 +70,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/auth/google/calendar/callback', [GoogleCalendarController::class, 'callback'])
         ->name('google-calendar.callback');
     Route::get('/today', Today::class)->name('today');
+    Route::get('/calendar', Calendar::class)->name('calendar');
     Route::redirect('/tonight', '/today');
     Route::get('/meal-plan', Planner::class)->name('meal-plan');
     Route::redirect('/plan', '/meal-plan');

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
- * One day of a user's Google calendars, merged across every connected account.
+ * A stretch of a user's Google calendars, merged across every connected account.
  *
  * The calendars shown are the ones already marked as blocking availability, so
  * the agenda matches what the booking pages treat as real commitments.
@@ -25,7 +25,7 @@ class DayAgenda
      * Bumped whenever the cached shape changes, so a deploy cannot serve a
      * payload the new view does not understand.
      */
-    private const CACHE_VERSION = 4;
+    private const CACHE_VERSION = 5;
 
     public function __construct(private GoogleCalendar $googleCalendar) {}
 
@@ -34,29 +34,39 @@ class DayAgenda
      */
     public function forUser(User $user, CarbonImmutable $day, string $timezone): array
     {
+        return $this->forRange($user, $day, $day, $timezone);
+    }
+
+    /**
+     * Every event between two days, both ends included.
+     *
+     * @return array{events: list<array<string, mixed>>, failed: bool, calendars: int}
+     */
+    public function forRange(User $user, CarbonImmutable $from, CarbonImmutable $to, string $timezone): array
+    {
         $selections = $this->calendars($user);
 
         if ($selections->isEmpty()) {
             return ['events' => [], 'failed' => false, 'calendars' => 0];
         }
 
-        $key = self::cacheKey($user, $day, $timezone);
+        $key = self::cacheKey($user, $from, $to, $timezone);
 
         return Cache::remember(
             $key,
             self::CACHE_SECONDS,
-            fn (): array => $this->fetch($selections, $day, $timezone),
+            fn (): array => $this->fetch($selections, $from, $to, $timezone),
         );
     }
 
     public static function forget(User $user, CarbonImmutable $day, string $timezone): void
     {
-        Cache::forget(self::cacheKey($user, $day, $timezone));
+        Cache::forget(self::cacheKey($user, $day, $day, $timezone));
     }
 
-    private static function cacheKey(User $user, CarbonImmutable $day, string $timezone): string
+    private static function cacheKey(User $user, CarbonImmutable $from, CarbonImmutable $to, string $timezone): string
     {
-        return 'agenda:v'.self::CACHE_VERSION.':'.$user->id.':'.$day->toDateString().':'.$timezone;
+        return 'agenda:v'.self::CACHE_VERSION.':'.$user->id.':'.$from->toDateString().':'.$to->toDateString().':'.$timezone;
     }
 
     /**
@@ -80,7 +90,7 @@ class DayAgenda
      * @param  Collection<int, Collection<int, BookingCalendarSelection>>  $selections
      * @return array{events: list<array<string, mixed>>, failed: bool, calendars: int}
      */
-    private function fetch($selections, CarbonImmutable $day, string $timezone): array
+    private function fetch($selections, CarbonImmutable $from, CarbonImmutable $to, string $timezone): array
     {
         $events = [];
         $failed = false;
@@ -96,8 +106,8 @@ class DayAgenda
                 $found = $this->googleCalendar->eventsBetween(
                     $connection,
                     $accountSelections->pluck('google_calendar_id')->values()->all(),
-                    $day->startOfDay(),
-                    $day->endOfDay(),
+                    $from->startOfDay(),
+                    $to->endOfDay(),
                     $timezone,
                 );
             } catch (Throwable $exception) {

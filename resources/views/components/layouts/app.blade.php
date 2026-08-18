@@ -26,6 +26,7 @@
             $userHouseholds = $currentUser->households()->orderBy('name')->get();
             $navItems = [
                 'today' => ['label' => 'Today', 'icon' => 'sun'],
+                'calendar' => ['label' => 'Calendar', 'icon' => 'calendar'],
                 'meal-plan' => ['label' => 'Meal Plan', 'icon' => 'calendar-days'],
                 'recipes' => ['label' => 'Recipes', 'icon' => 'book-open'],
                 'shopping' => ['label' => 'Shopping', 'icon' => 'shopping-cart'],

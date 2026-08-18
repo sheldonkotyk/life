@@ -20,6 +20,8 @@ class GoogleCalendarClient implements GoogleCalendar
 {
     private const API_URL = 'https://www.googleapis.com/calendar/v3';
 
+    private const USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo';
+
     /**
      * @return list<array{id: string, name: string, primary: bool, access_role: string}>
      */
@@ -56,6 +58,24 @@ class GoogleCalendarClient implements GoogleCalendar
         } while ($pageToken);
 
         return $calendars;
+    }
+
+    /**
+     * The Google profile behind the connection: its display name and picture.
+     *
+     * @return array{name: string|null, avatar_url: string|null}
+     */
+    public function profile(GoogleCalendarConnection $connection): array
+    {
+        $response = $this->send(
+            $connection,
+            fn (PendingRequest $request): Response => $request->get(self::USERINFO_URL),
+        )->throw();
+
+        return [
+            'name' => $response->json('name'),
+            'avatar_url' => $response->json('picture'),
+        ];
     }
 
     /**
@@ -234,58 +254,71 @@ class GoogleCalendarClient implements GoogleCalendar
         $events = [];
 
         foreach ($calendarIds as $calendarId) {
-            $response = $this->send(
-                $connection,
-                fn (PendingRequest $request): Response => $request->get(
-                    self::API_URL.'/calendars/'.rawurlencode($calendarId).'/events',
-                    [
-                        'timeMin' => $startsAt->utc()->toRfc3339String(),
-                        'timeMax' => $endsAt->utc()->toRfc3339String(),
-                        'timeZone' => $timezone,
-                        'singleEvents' => 'true',
-                        'orderBy' => 'startTime',
-                        'maxResults' => 100,
-                    ],
-                ),
-            )->throw();
+            $pageToken = null;
 
-            foreach ($response->json('items', []) as $event) {
-                if (($event['status'] ?? null) === 'cancelled') {
-                    continue;
-                }
-
-                // An invitation the user turned down is not part of their day.
-                if ($this->declinedBySelf($event)) {
-                    continue;
-                }
-
-                $start = $event['start']['dateTime'] ?? $event['start']['date'] ?? null;
-                $end = $event['end']['dateTime'] ?? $event['end']['date'] ?? null;
-
-                if (! is_string($start) || ! is_string($end)) {
-                    continue;
-                }
-
-                $allDay = ! isset($event['start']['dateTime']);
-
-                $events[] = [
-                    'id' => (string) ($event['id'] ?? ''),
-                    'calendar_id' => $calendarId,
-                    'title' => (string) ($event['summary'] ?? 'Busy'),
-                    'starts_at' => CarbonImmutable::parse($start, $timezone),
-                    'ends_at' => CarbonImmutable::parse($end, $timezone),
-                    'all_day' => $allDay,
-                    'link' => $event['htmlLink'] ?? null,
-                    // Google models working location, focus time and
-                    // out-of-office as events of their own kind.
-                    'type' => (string) ($event['eventType'] ?? 'default'),
-                    'busy' => ($event['transparency'] ?? 'opaque') === 'opaque',
-                    'location' => $event['location'] ?? null,
-                    'description' => $event['description'] ?? null,
-                    'organizer' => $event['organizer']['email'] ?? null,
-                    'attendees' => $this->attendees($event),
+            do {
+                $query = [
+                    'timeMin' => $startsAt->utc()->toRfc3339String(),
+                    'timeMax' => $endsAt->utc()->toRfc3339String(),
+                    'timeZone' => $timezone,
+                    'singleEvents' => 'true',
+                    'orderBy' => 'startTime',
+                    'maxResults' => 250,
                 ];
-            }
+
+                if ($pageToken) {
+                    $query['pageToken'] = $pageToken;
+                }
+
+                $response = $this->send(
+                    $connection,
+                    fn (PendingRequest $request): Response => $request->get(
+                        self::API_URL.'/calendars/'.rawurlencode($calendarId).'/events',
+                        $query,
+                    ),
+                )->throw();
+
+                // A month of a busy calendar runs past one page.
+                $pageToken = $response->json('nextPageToken');
+
+                foreach ($response->json('items', []) as $event) {
+                    if (($event['status'] ?? null) === 'cancelled') {
+                        continue;
+                    }
+
+                    // An invitation the user turned down is not part of their day.
+                    if ($this->declinedBySelf($event)) {
+                        continue;
+                    }
+
+                    $start = $event['start']['dateTime'] ?? $event['start']['date'] ?? null;
+                    $end = $event['end']['dateTime'] ?? $event['end']['date'] ?? null;
+
+                    if (! is_string($start) || ! is_string($end)) {
+                        continue;
+                    }
+
+                    $allDay = ! isset($event['start']['dateTime']);
+
+                    $events[] = [
+                        'id' => (string) ($event['id'] ?? ''),
+                        'calendar_id' => $calendarId,
+                        'title' => (string) ($event['summary'] ?? 'Busy'),
+                        'starts_at' => CarbonImmutable::parse($start, $timezone),
+                        'ends_at' => CarbonImmutable::parse($end, $timezone),
+                        'all_day' => $allDay,
+                        'link' => $event['htmlLink'] ?? null,
+                        // Google models working location, focus time and
+                        // out-of-office as events of their own kind.
+                        'type' => (string) ($event['eventType'] ?? 'default'),
+                        'busy' => ($event['transparency'] ?? 'opaque') === 'opaque',
+                        'location' => $event['location'] ?? null,
+                        'description' => $event['description'] ?? null,
+                        'organizer' => $event['organizer']['email'] ?? null,
+                        'attendees' => $this->attendees($event),
+                    ];
+                }
+            } while ($pageToken);
         }
 
         return $events;
