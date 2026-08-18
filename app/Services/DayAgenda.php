@@ -25,7 +25,7 @@ class DayAgenda
      * Bumped whenever the cached shape changes, so a deploy cannot serve a
      * payload the new view does not understand.
      */
-    private const CACHE_VERSION = 3;
+    private const CACHE_VERSION = 4;
 
     public function __construct(private GoogleCalendar $googleCalendar) {}
 

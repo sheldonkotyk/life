@@ -41,7 +41,7 @@
                         @endphp
                         <div wire:key="event-{{ md5($event['calendar_id'].$event['id']) }}">
                             <flux:modal.trigger :name="$modalName">
-                                <button type="button" class="flex w-full flex-col gap-1 py-3 text-left first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:gap-4">
+                                <button type="button" class="-mx-2 flex w-full cursor-pointer flex-col gap-1 rounded px-2 py-3 text-left transition hover:bg-zinc-50 sm:flex-row sm:items-baseline sm:gap-4 dark:hover:bg-zinc-800">
                                     <div class="w-36 shrink-0 text-sm font-medium whitespace-nowrap text-zinc-500 sm:w-44">
                                         @if ($event['all_day'])
                                             All day

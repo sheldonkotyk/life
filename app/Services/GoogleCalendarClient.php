@@ -254,6 +254,11 @@ class GoogleCalendarClient implements GoogleCalendar
                     continue;
                 }
 
+                // An invitation the user turned down is not part of their day.
+                if ($this->declinedBySelf($event)) {
+                    continue;
+                }
+
                 $start = $event['start']['dateTime'] ?? $event['start']['date'] ?? null;
                 $end = $event['end']['dateTime'] ?? $event['end']['date'] ?? null;
 
@@ -284,6 +289,22 @@ class GoogleCalendarClient implements GoogleCalendar
         }
 
         return $events;
+    }
+
+    /**
+     * Whether the connected account answered "no" to this invitation.
+     *
+     * @param  array<string, mixed>  $event
+     */
+    private function declinedBySelf(array $event): bool
+    {
+        foreach ($event['attendees'] ?? [] as $attendee) {
+            if (($attendee['self'] ?? false) && ($attendee['responseStatus'] ?? null) === 'declined') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

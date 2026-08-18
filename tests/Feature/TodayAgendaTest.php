@@ -204,3 +204,33 @@ it('labels the things Google keeps that are not meetings', function () {
         ->assertSee('Heads down')
         ->assertSee('Focus time');
 });
+
+it('leaves out invitations the user declined', function () {
+    Http::preventStrayRequests();
+    $user = userWithCalendars();
+
+    Http::fake(['www.googleapis.com/calendar/v3/calendars/*' => Http::response(['items' => [[
+        'id' => 'd1',
+        'summary' => 'Optional sync',
+        'start' => ['dateTime' => '2026-08-13T09:00:00-05:00'],
+        'end' => ['dateTime' => '2026-08-13T09:30:00-05:00'],
+        'attendees' => [
+            ['email' => 'work@example.test', 'self' => true, 'responseStatus' => 'declined'],
+            ['email' => 'alex@example.test', 'responseStatus' => 'accepted'],
+        ],
+    ], [
+        'id' => 'a1',
+        'summary' => 'Standup',
+        'start' => ['dateTime' => '2026-08-13T10:00:00-05:00'],
+        'end' => ['dateTime' => '2026-08-13T10:15:00-05:00'],
+        'attendees' => [
+            ['email' => 'work@example.test', 'self' => true, 'responseStatus' => 'accepted'],
+            // Someone else saying no keeps the meeting on the day.
+            ['email' => 'alex@example.test', 'responseStatus' => 'declined'],
+        ],
+    ]]])]);
+
+    $agenda = app(DayAgenda::class)->forUser($user, CarbonImmutable::today('America/Winnipeg'), 'America/Winnipeg');
+
+    expect(collect($agenda['events'])->pluck('title')->unique()->all())->toBe(['Standup']);
+});
