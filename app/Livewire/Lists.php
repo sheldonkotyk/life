@@ -20,7 +20,7 @@ class Lists extends Component
 
     public string $newListColor = 'indigo';
 
-    public const LIST_COLORS = ['zinc', 'red', 'orange', 'amber', 'lime', 'emerald', 'sky', 'indigo', 'violet', 'pink'];
+    public const LIST_COLORS = TodoList::COLORS;
 
     public string $newItemTitle = '';
 

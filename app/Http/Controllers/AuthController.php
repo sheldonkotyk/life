@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ProvisionUserForEmail;
 use App\Mail\MagicLoginLink;
 use App\Models\FamilyMember;
 use App\Models\Household;
@@ -242,38 +243,7 @@ class AuthController extends Controller
 
     private function finishMagicLogin(string $email): RedirectResponse
     {
-        $user = User::firstOrNew(['email' => $email]);
-
-        if (! $user->exists) {
-            $user->name = Str::headline(Str::before($email, '@')) ?: 'You';
-        }
-
-        $invitedHousehold = $this->pullInvitedHousehold();
-
-        $newHousehold = null;
-        if (! $user->household_id && ! $invitedHousehold) {
-            $householdName = $user->name ? $user->name."'s Household" : 'Your Household';
-            $newHousehold = Household::create(['name' => $householdName]);
-        }
-
-        $user->email_verified_at = $user->email_verified_at ?: now();
-        $user->save();
-
-        if ($newHousehold) {
-            $user->joinHousehold($newHousehold);
-        }
-
-        if ($invitedHousehold) {
-            $user->joinHousehold($invitedHousehold);
-        }
-
-        if (! $user->familyMember) {
-            FamilyMember::create([
-                'household_id' => $user->household_id,
-                'user_id' => $user->id,
-                'name' => $user->name,
-            ]);
-        }
+        $user = app(ProvisionUserForEmail::class)->execute($email, $this->pullInvitedHousehold());
 
         Auth::login($user, true);
 

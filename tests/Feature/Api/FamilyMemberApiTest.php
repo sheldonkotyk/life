@@ -85,3 +85,79 @@ it('removes a preference', function () {
     $this->deleteJson("/api/preferences/{$pref->id}")->assertOk();
     expect(FoodPreference::find($pref->id))->toBeNull();
 });
+
+it('sets default attendance for a whole day', function () {
+    $user = loginApiUser();
+    $member = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'A']);
+
+    $this->postJson("/api/family-members/{$member->id}/attendance-defaults", [
+        'attending' => false,
+        'days' => ['mon'],
+    ])->assertOk();
+
+    $member->refresh();
+    expect($member->attendsByDefault('mon', 'dinner'))->toBeFalse()
+        ->and($member->attendsByDefault('tue', 'dinner'))->toBeTrue();
+});
+
+it('sets default attendance for one slot across the week', function () {
+    $user = loginApiUser();
+    $member = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'A']);
+
+    $this->postJson("/api/family-members/{$member->id}/attendance-defaults", [
+        'attending' => false,
+        'slots' => ['lunch'],
+    ])->assertOk();
+
+    $member->refresh();
+    expect($member->attendsByDefault('mon', 'lunch'))->toBeFalse()
+        ->and($member->attendsByDefault('mon', 'dinner'))->toBeTrue();
+});
+
+it('rejects a day that is not a day', function () {
+    $user = loginApiUser();
+    $member = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'A']);
+
+    $this->postJson("/api/family-members/{$member->id}/attendance-defaults", [
+        'attending' => true,
+        'days' => ['funday'],
+    ])->assertStatus(422);
+});
+
+it('normalises a built avatar before storing it', function () {
+    $user = loginApiUser();
+    $member = FamilyMember::create(['household_id' => $user->household_id, 'name' => 'A']);
+
+    $this->patchJson("/api/family-members/{$member->id}", [
+        'avatar_config' => ['hair' => ['style' => 'bun']],
+    ])->assertOk();
+
+    $config = $member->fresh()->avatar_config;
+    expect($config['hair']['style'])->toBe('bun')
+        ->and($config)->toHaveKey('skin')
+        ->and($config)->toHaveKey('eyes');
+});
+
+it('keeps a member\'s account name in step with their name', function () {
+    $user = loginApiUser();
+    $member = FamilyMember::create([
+        'household_id' => $user->household_id,
+        'user_id' => $user->id,
+        'name' => 'Old',
+    ]);
+
+    $this->patchJson("/api/family-members/{$member->id}", ['name' => 'New'])->assertOk();
+
+    expect($user->fresh()->name)->toBe('New');
+});
+
+it('refuses to delete a member who is an account', function () {
+    $user = loginApiUser();
+    $member = FamilyMember::create([
+        'household_id' => $user->household_id,
+        'user_id' => $user->id,
+        'name' => 'Me',
+    ]);
+
+    $this->deleteJson("/api/family-members/{$member->id}")->assertStatus(403);
+});

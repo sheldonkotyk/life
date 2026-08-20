@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TodoList extends Model
 {
+    /** The palette a list may be tinted with, shared by the web app and the API. */
+    public const COLORS = ['zinc', 'red', 'orange', 'amber', 'lime', 'emerald', 'sky', 'indigo', 'violet', 'pink'];
+
     protected $guarded = [];
 
     public function household(): BelongsTo
